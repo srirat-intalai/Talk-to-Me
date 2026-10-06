@@ -4,332 +4,98 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Talk to Me</title>
+<meta name="description" content="ไพ่ Deep Talk แบบทดสอบนิสัย และเกมไขคดี">
+<meta name="theme-color" content="#fbefe9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Talk to Me">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="images/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="images/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Charm:wght@700&family=Mali:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --cream: #fffaf3;
-    --ink: #4a3f55;
-    --ink-soft: #8a7f96;
-    --gold: #c9a45c;
-    --gold-soft: #e9d6a8;
-    --lilac: #e8e1f3;
-    --blush: #f6e4e6;
-    --l1: #f3d9c4;
-    --l2: #dcd0ef;
-    --l3: #c9d8ec;
-    --wish: #f7e7b4;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body {
-    font-family: "Mali", system-ui, sans-serif;
-    color: var(--ink);
-    background: var(--cream);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ---------- ออร่าพื้นหลังที่ค่อยๆ ลอยเปลี่ยนสี ---------- */
-  .aura { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .aura i {
-    position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%;
-    filter: blur(60px); opacity: .55;
-    animation: drift 18s ease-in-out infinite alternate;
-  }
-  .aura i:nth-child(1) { background: #f6dfe6; left: -20vmax; top: -15vmax; }
-  .aura i:nth-child(2) { background: #e3dbf6; right: -25vmax; top: 10vh; animation-duration: 22s; animation-delay: -6s; }
-  .aura i:nth-child(3) { background: #f7ecd0; left: 10vw; bottom: -30vmax; animation-duration: 26s; animation-delay: -12s; }
-  .aura i:nth-child(4) { background: #dceaf6; right: 0; bottom: -20vmax; width: 40vmax; height: 40vmax; animation-duration: 20s; }
-  @keyframes drift {
-    0%   { transform: translate(0, 0) scale(1); }
-    50%  { transform: translate(6vw, 4vh) scale(1.12); }
-    100% { transform: translate(-4vw, 8vh) scale(.95); }
-  }
-
-  /* canvas ประกายดาว (ฝุ่นทอง + ประกายตามนิ้ว/เมาส์ + ระเบิดประกาย) */
-  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-
-  main {
-    position: relative; z-index: 1;
-    max-width: 520px; margin: 0 auto;
-    padding: 28px 16px 48px;
-    min-height: 100vh;
-    display: flex; flex-direction: column; align-items: center;
-  }
-  .screen { width: 100%; display: none; flex-direction: column; align-items: center; }
-  .screen.active { display: flex; animation: fadeIn .6s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-
-  /* ---------- หน้าแรก ---------- */
-  .hero { position: relative; width: 190px; aspect-ratio: 682 / 1024; margin: 6px 0 18px; animation: float 6s ease-in-out infinite; }
-  .hero .halo {
-    position: absolute; inset: -18px; border-radius: 999px 999px 40px 40px;
-    background: conic-gradient(from 0deg, #f9e3a3, #f6c8d8, #d9cbf5, #c8e3f5, #f9e3a3);
-    filter: blur(22px); opacity: .85;
-    animation: spin 10s linear infinite, pulse 4s ease-in-out infinite;
-  }
-  .hero .frame {
-    position: absolute; inset: 0; border-radius: 999px 999px 24px 24px; overflow: hidden;
-    border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--gold-soft), 0 14px 36px rgba(120,90,140,.2);
-  }
-  .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .glint {
-    position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.75) 48%, transparent 60%);
-    background-size: 250% 100%; background-position: 150% 0;
-    animation: glint 4.5s ease-in-out infinite;
-  }
-  @keyframes glint { 0%, 55% { background-position: 150% 0; } 100% { background-position: -60% 0; } }
-  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
-
-  .logo {
-    font-family: "Charm", cursive;
-    font-size: clamp(46px, 12vw, 68px);
-    line-height: 1.1;
-    background: linear-gradient(100deg, var(--ink) 20%, #c9a45c 40%, #f3d58f 50%, #c9a45c 60%, var(--ink) 80%);
-    background-size: 250% 100%;
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    animation: shimmerText 5s linear infinite;
-    filter: drop-shadow(0 2px 14px rgba(201,164,92,.3));
-  }
-  @keyframes shimmerText { from { background-position: 100% 0; } to { background-position: -150% 0; } }
-  .tagline { color: var(--ink-soft); margin: 8px 0 24px; text-align: center; line-height: 1.6; }
-
-  .levels { width: 100%; display: grid; gap: 12px; }
-  .level-btn {
-    position: relative; overflow: hidden;
-    width: 100%; border: 1px solid rgba(201,164,92,.35);
-    background: rgba(255,255,255,.6);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: 18px; padding: 15px 18px;
-    display: flex; align-items: center; gap: 14px;
-    font: inherit; color: inherit; text-align: left; cursor: pointer;
-    transition: transform .25s, box-shadow .25s, background .25s;
-    opacity: 0; animation: rise .6s cubic-bezier(.2,.8,.3,1) forwards;
-    animation-delay: calc(var(--i) * 90ms + 150ms);
-  }
-  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-  .level-btn::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.8) 50%, transparent 70%);
-    transform: translateX(-120%); transition: transform .8s ease;
-  }
-  .level-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(201,164,92,.22); background: rgba(255,255,255,.85); }
-  .level-btn:hover::after { transform: translateX(120%); }
-  .level-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-  .level-dot {
-    flex: none; width: 46px; height: 46px; border-radius: 50%;
-    display: grid; place-items: center; font-size: 20px;
-    background: var(--c); box-shadow: inset 0 0 0 2px rgba(255,255,255,.85), 0 0 18px var(--c);
-  }
-  .level-btn strong { display: block; font-weight: 600; font-size: 17px; }
-  .level-btn small { color: var(--ink-soft); font-size: 13px; }
-
-  .howto { margin-top: 24px; font-size: 13px; color: var(--ink-soft); text-align: center; line-height: 1.7; }
-
-  /* ---------- หน้าเล่น ---------- */
-  .topbar { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-  .icon-btn {
-    border: 1px solid rgba(201,164,92,.25); background: rgba(255,255,255,.7); color: var(--ink);
-    width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
-    font-size: 18px; display: grid; place-items: center;
-    box-shadow: 0 2px 12px rgba(120,90,140,.1); transition: transform .2s, background .2s;
-  }
-  .icon-btn:hover { background: #fff; transform: scale(1.06); }
-  #shuffleBtn:active { transform: rotate(-180deg); transition: transform .4s; }
-  .level-tag { font-weight: 600; font-size: 15px; }
-  .progress { font-size: 13px; color: var(--ink-soft); }
-  .bar { width: 120px; height: 4px; border-radius: 4px; background: rgba(201,164,92,.18); margin: 6px auto 0; overflow: hidden; }
-  .bar span { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, #f3c6d3, var(--gold), #d9c9f2); transition: width .5s ease; }
-
-  .card-wrap {
-    position: relative;
-    width: min(100%, 330px);
-    aspect-ratio: 5 / 7.4;
-    perspective: 1400px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  /* ออร่าเรืองแสงรอบไพ่ */
-  .card-wrap::before {
-    content: ""; position: absolute; inset: -16px; border-radius: 36px;
-    background: conic-gradient(from 0deg, #f9e3a3, #f6c8d8, #d9cbf5, #c8e3f5, #f9e3a3);
-    filter: blur(26px); opacity: .6; z-index: -1;
-    animation: spin 12s linear infinite, pulse 5s ease-in-out infinite;
-  }
-  .card-wrap.wish-glow::before { opacity: 1; filter: blur(32px); inset: -24px; }
-
-  /* สำรับไพ่ซ้อนด้านหลัง */
-  .stack {
-    position: absolute; inset: 0; border-radius: 22px; z-index: -1;
-    background: #fff; border: 1.5px solid var(--gold-soft);
-    box-shadow: 0 10px 24px rgba(90,70,110,.12);
-    transition: opacity .4s;
-  }
-  .stack.s1 { transform: rotate(-4deg) translate(-6px, 6px); }
-  .stack.s2 { transform: rotate(3deg) translate(6px, 10px); }
-
-  .tilt { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .25s ease-out; }
-  .card {
-    position: relative; width: 100%; height: 100%;
-    transform-style: preserve-3d;
-    transition: transform .8s cubic-bezier(.3,.8,.3,1);
-  }
-  .card.flipped { transform: rotateY(180deg); }
-  .card.deal { animation: deal .6s cubic-bezier(.2,.9,.3,1.2); }
-  @keyframes deal { from { transform: translateY(40px) scale(.9) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
-
-  .face {
-    position: absolute; inset: 0; border-radius: 22px;
-    backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    overflow: hidden;
-    box-shadow: 0 18px 40px rgba(90,70,110,.2), 0 2px 6px rgba(90,70,110,.08);
-  }
-  /* เงาโฮโลแกรมที่ขยับตามการเอียงไพ่ */
-  .holo {
-    position: absolute; inset: 0; pointer-events: none; z-index: 2;
-    background: linear-gradient(115deg,
-      transparent 20%, rgba(255,200,230,.45) 36%, rgba(200,230,255,.45) 46%,
-      rgba(255,240,190,.5) 56%, transparent 72%);
-    background-size: 260% 260%;
-    background-position: var(--mx, 50%) var(--my, 50%);
-    mix-blend-mode: overlay; opacity: .55;
-    transition: opacity .3s;
-  }
-  .card-wrap:hover .holo { opacity: .9; }
-
-  /* ด้านหลังไพ่ */
-  .back { background: #fff url("images/wish1.jpeg") center 30% / cover no-repeat; border: 6px solid #fff; }
-  .back .inner-border { position: absolute; inset: 8px; border-radius: 14px; border: 1.5px solid var(--gold-soft); z-index: 3; }
-  .back .hint {
-    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 3;
-    font-size: 13px; letter-spacing: .5px; color: var(--ink);
-    background: rgba(255,255,255,.82); padding: 6px 14px; border-radius: 999px;
-    white-space: nowrap; animation: breathe 2.4s ease-in-out infinite;
-  }
-  @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,164,92,.45); } 50% { box-shadow: 0 0 0 8px rgba(201,164,92,0); } }
-
-  /* ด้านหน้าไพ่ */
-  .front {
-    transform: rotateY(180deg);
-    background:
-      radial-gradient(circle at 50% 0%, var(--tint, var(--l1)) 0%, transparent 70%),
-      var(--cream);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 36px 28px; text-align: center;
-  }
-  .front::before {
-    content: ""; position: absolute; inset: 12px; border-radius: 14px;
-    border: 1.5px solid var(--gold-soft);
-    outline: 1px solid var(--gold-soft); outline-offset: -6px;
-    pointer-events: none;
-  }
-  .front .badge {
-    position: absolute; top: 28px; left: 50%; transform: translateX(-50%); z-index: 3;
-    font-size: 12px; color: var(--gold); letter-spacing: 1px; white-space: nowrap;
-  }
-  .front .ornament { color: var(--gold); font-size: 18px; letter-spacing: 8px; margin: 14px 0; position: relative; z-index: 3; }
-  .front .question { font-size: clamp(19px, 5.4vw, 23px); font-weight: 500; line-height: 1.6; position: relative; z-index: 3; }
-  .front .num { position: absolute; bottom: 26px; font-size: 12px; color: var(--ink-soft); z-index: 3; }
-  .card.flipped .question { animation: textIn .6s .35s both; }
-  @keyframes textIn { from { opacity: 0; filter: blur(6px); transform: translateY(6px); } to { opacity: 1; filter: none; transform: none; } }
-
-  /* ไพ่ขอพร */
-  .front.wish {
-    background:
-      linear-gradient(to bottom, rgba(255,250,243,.1) 0%, rgba(255,250,243,.93) 50%),
-      url("images/wish0.jpeg") center top / cover no-repeat;
-    justify-content: flex-end; padding-bottom: 56px;
-  }
-  .front.wish .badge { background: rgba(255,255,255,.88); padding: 4px 12px; border-radius: 999px; }
-  .front.wish .holo { opacity: .9; animation: holoShift 3s linear infinite; }
-  @keyframes holoShift { from { background-position: 0% 0%; } to { background-position: 100% 100%; } }
-
-  .actions { display: flex; gap: 12px; margin-top: 30px; width: min(100%, 330px); }
-  .btn {
-    position: relative; overflow: hidden;
-    flex: 1; border: none; cursor: pointer; font: inherit; font-weight: 600;
-    padding: 14px 16px; border-radius: 999px; font-size: 15px;
-    transition: transform .15s, box-shadow .2s;
-  }
-  .btn:active { transform: scale(.96); }
-  .btn-primary {
-    background: linear-gradient(135deg, #e3c37e, var(--gold) 60%, #d8a9b8);
-    color: #fff; box-shadow: 0 6px 20px rgba(201,164,92,.45);
-  }
-  .btn-primary::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.6) 50%, transparent 70%);
-    transform: translateX(-120%); animation: sweep 3.2s ease-in-out infinite;
-  }
-  @keyframes sweep { 0%, 60% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-  .btn-ghost { background: rgba(255,255,255,.75); color: var(--ink); box-shadow: 0 2px 10px rgba(120,90,140,.08); }
-  .btn:disabled { opacity: .45; cursor: default; }
-
-  /* นางฟ้าบินผ่านตอนเจอไพ่ขอพร */
-  #fairy {
-    position: fixed; left: 0; top: 0; width: 130px; z-index: 6; pointer-events: none;
-    mix-blend-mode: multiply; opacity: 0;
-    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 60%, transparent 100%);
-            mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 60%, transparent 100%);
-  }
-
-  /* ---------- จบสำรับ ---------- */
-  .end-card {
-    position: relative; width: min(100%, 340px); text-align: center;
-    background: rgba(255,255,255,.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border-radius: 24px; padding: 30px 24px 26px;
-    box-shadow: 0 18px 40px rgba(90,70,110,.12);
-    border: 1px solid rgba(201,164,92,.3);
-  }
-  .end-card .hero { width: 130px; margin: 0 auto 14px; aspect-ratio: 832 / 1024; }
-  .end-card h2 { font-family: "Charm", cursive; font-size: 38px; margin-bottom: 6px; }
-  .end-card p { color: var(--ink-soft); margin-bottom: 20px; line-height: 1.7; }
-  .end-card .btn { width: 100%; margin-top: 10px; }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
-    .card { transition: none; }
-    .level-btn { opacity: 1; }
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Athiti:wght@200;300;400;500;600;700&family=Fleur+De+Leah&family=Niconne&family=Ruwudu:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body data-theme="talk">
 <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 <img id="fairy" src="images/wish1.jpeg" alt="" aria-hidden="true">
+<div id="toast" role="status"></div>
+<div class="modal" id="modal" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modalMsg">
+    <p id="modalMsg"></p>
+    <div class="stack-btns">
+      <button class="btn btn-primary" id="modalYes"></button>
+      <button class="btn btn-ghost" id="modalNo"></button>
+    </div>
+  </div>
+</div>
 
 <main>
-  <!-- หน้าแรก -->
-  <section class="screen active" id="home">
+  <!-- ================= หน้าแรก ================= -->
+  <section class="screen active" id="hub" data-theme="talk">
     <div class="hero">
       <div class="halo"></div>
       <div class="frame"><img src="images/wish0.jpeg" alt="ภาพนางฟ้าสามองค์"><div class="glint"></div></div>
     </div>
     <h1 class="logo">Talk to Me ✦</h1>
-    <p class="tagline">ไพ่ชวนคุยเรื่องลึกๆ<br>เพื่อให้เรารู้จักกันมากขึ้นอีกนิด</p>
+    <p class="tagline">คุยลึก วัดใจ ไขปริศนา<br>เล่นกับเพื่อน คนคุย หรือคนเดียวก็สนุก</p>
+    <div class="menu" id="hubMenu"></div>
+  </section>
 
-    <div class="levels" id="levels"></div>
+  <!-- ================= ไพ่ Deep Talk ================= -->
+  <section class="screen" id="talk-decks" data-theme="talk">
+    <div class="topbar">
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <div class="topbar-mid"></div>
+      <span class="spacer"></span>
+    </div>
+    <h2 class="section-title">ไพ่ Deep Talk</h2>
+    <p class="section-sub">เลือกมา 1 สำรับ · สำรับละ 52 ใบ<br>(50 คำถามไม่ซ้ำกัน + ไพ่ขอพร 2 ใบ)</p>
 
+    <div class="panel players">
+      <div class="block-title" style="margin:0 0 6px">👥 ผู้เล่น <small id="playerHint"></small></div>
+      <div class="chips" id="playerChips"></div>
+      <form class="add-row" id="playerForm" autocomplete="off">
+        <input class="text-input" id="playerInput" maxlength="20" placeholder="พิมพ์ชื่อ แล้วกดเพิ่ม" aria-label="ชื่อผู้เล่น">
+        <button class="btn btn-ghost" type="submit">เพิ่ม</button>
+      </form>
+    </div>
+
+    <div class="menu" id="deckList" style="margin-top:16px"></div>
+    <button class="btn btn-ghost" id="customOpen" style="width:100%; margin-top:10px">✏️ เพิ่ม / แก้คำถามของฉัน</button>
     <p class="howto">
-      ผลัดกันจั่วไพ่ทีละใบ แล้วตอบอย่างจริงใจ<br>
-      ระวัง! อาจเจอ <b>ไพ่ขอพร ✨</b> ซ่อนอยู่ในสำรับ
+      ผลัดกันจั่วไพ่ทีละใบ แล้วตอบแบบจริงใจ<br>
+      ยังไม่พร้อมตอบข้อไหน กด "ใบถัดไป" ผ่านได้เลย<br>
+      เจอ <b>ไพ่ขอพร ✨</b> เมื่อไหร่ ทำตามที่ไพ่บอกนะ
     </p>
   </section>
 
-  <!-- หน้าเล่น -->
-  <section class="screen" id="play">
+  <section class="screen" id="talk-custom" data-theme="talk">
     <div class="topbar">
-      <button class="icon-btn" id="homeBtn" aria-label="กลับหน้าแรก">←</button>
-      <div style="text-align:center">
-        <div class="level-tag" id="levelTag"></div>
-        <div class="progress" id="progress"></div>
-        <div class="bar"><span id="bar"></span></div>
+      <button class="icon-btn" id="customBack" aria-label="กลับไปเลือกสำรับ">←</button>
+      <div class="topbar-mid"><div class="top-title">✏️ คำถามของฉัน</div><div class="progress" id="customCount"></div></div>
+      <span class="spacer"></span>
+    </div>
+    <form class="panel custom-form" id="customForm" autocomplete="off">
+      <textarea class="text-input" id="customInput" maxlength="200" rows="3" placeholder="พิมพ์คำถามที่อยากถาม เช่น ถ้าย้อนเวลาได้ 1 วัน จะกลับไปวันไหน?" aria-label="คำถามใหม่"></textarea>
+      <button class="btn btn-primary" type="submit">+ เพิ่มคำถาม</button>
+    </form>
+    <p class="muted" id="customEmpty" style="margin-top:18px; text-align:center">ยังไม่มีคำถาม ลองเพิ่มข้อแรกดูสิ</p>
+    <ol class="custom-list" id="customList"></ol>
+    <div class="stack-btns">
+      <button class="btn btn-primary" id="customPlay">🃏 เล่นคำถามของฉัน</button>
+    </div>
+  </section>
+
+  <section class="screen" id="talk-play" data-theme="talk">
+    <div class="topbar">
+      <button class="icon-btn" id="talkBack" aria-label="กลับไปเลือกสำรับ">←</button>
+      <div class="topbar-mid">
+        <div class="top-title" id="talkTitle"></div>
+        <div class="progress" id="talkProgress"></div>
+        <div class="bar"><span id="talkBar"></span></div>
+        <div class="turn" id="turnTag" aria-live="polite"></div>
       </div>
       <button class="icon-btn" id="shuffleBtn" aria-label="สับไพ่ใหม่">↻</button>
     </div>
@@ -358,393 +124,136 @@
 
     <div class="actions">
       <button class="btn btn-ghost" id="prevBtn">ใบก่อน</button>
+      <button class="icon-btn fav" id="favBtn" aria-label="เก็บไว้ในไพ่ที่ชอบ" aria-pressed="false">♡</button>
       <button class="btn btn-primary" id="nextBtn">เปิดไพ่</button>
     </div>
   </section>
 
-  <!-- จบสำรับ -->
-  <section class="screen" id="end">
-    <div class="end-card">
-      <div class="hero">
+  <section class="screen" id="talk-end" data-theme="talk">
+    <div class="panel end-card" id="talkEndCard">
+      <div class="hero small wide">
         <div class="halo"></div>
         <div class="frame"><img src="images/wish1.jpeg" alt="ภาพนางฟ้าโบกไม้กายสิทธิ์"><div class="glint"></div></div>
       </div>
       <h2>ครบสำรับแล้ว ✨</h2>
-      <p>ขอบคุณที่เปิดใจคุยกันนะ<br>หวังว่าคืนนี้จะได้รู้จักกันมากขึ้น</p>
-      <button class="btn btn-primary" id="againBtn">เล่นสำรับนี้อีกครั้ง</button>
-      <button class="btn btn-ghost" id="endHomeBtn">เลือกระดับใหม่</button>
+      <p class="muted">ขอบคุณที่เปิดใจคุยกันนะ<br>หวังว่าจะได้รู้จักกันมากขึ้นอีกนิด</p>
+      <div class="stack-btns">
+        <button class="btn btn-primary" id="againBtn">เล่นสำรับนี้อีกรอบ</button>
+        <button class="btn btn-ghost" id="talkEndBack">เลือกสำรับอื่น</button>
+      </div>
     </div>
+  </section>
+
+  <!-- ================= แบบทดสอบ ================= -->
+  <section class="screen" id="quiz-list" data-theme="quiz">
+    <div class="topbar">
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <div class="topbar-mid"></div>
+      <span class="spacer"></span>
+    </div>
+    <div class="hero small wide">
+      <div class="halo"></div>
+      <div class="frame"><img src="images/wish1.jpeg" alt=""><div class="glint"></div></div>
+    </div>
+    <h2 class="section-title">แบบทดสอบ</h2>
+    <p class="section-sub">ตอบตามใจ ไม่มีถูกไม่มีผิด</p>
+    <div class="menu" id="quizList"></div>
+  </section>
+
+  <section class="screen" id="quiz-play" data-theme="quiz">
+    <div class="topbar">
+      <button class="icon-btn" id="quizBack" aria-label="ย้อนกลับ">←</button>
+      <div class="topbar-mid">
+        <div class="top-title" id="quizTitle"></div>
+        <div class="progress" id="quizProgress"></div>
+        <div class="bar"><span id="quizBar"></span></div>
+      </div>
+      <button class="icon-btn" data-go="quiz-list" aria-label="ออก">✕</button>
+    </div>
+    <div class="panel q-card" id="quizCard">
+      <div class="orb sm"><div class="halo"></div><span id="quizScene"></span></div>
+      <p class="q-text" id="quizQ"></p>
+      <div class="opts" id="quizOpts"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="quiz-result" data-theme="quiz">
+    <div class="topbar">
+      <button class="icon-btn" data-go="quiz-list" aria-label="กลับหน้ารวม">←</button>
+      <div class="topbar-mid"></div>
+      <span class="spacer"></span>
+    </div>
+    <div class="panel" id="quizResult"></div>
+  </section>
+
+  <!-- ================= ไขคดี & ปริศนา ================= -->
+  <section class="screen" id="mystery-list" data-theme="case">
+    <div class="topbar">
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <div class="topbar-mid"></div>
+      <span class="spacer"></span>
+    </div>
+    <div class="hero small">
+      <div class="halo"></div>
+      <div class="frame"><img src="images/wish0.jpeg" alt=""><div class="glint"></div></div>
+    </div>
+    <h2 class="section-title">ไขคดี & ปริศนา</h2>
+    <p class="section-sub">สังเกตให้ดี ความจริงซ่อนอยู่ในรายละเอียด</p>
+    <div class="menu" id="mysteryList"></div>
+  </section>
+
+  <section class="screen" id="case-play" data-theme="case">
+    <div class="topbar">
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <div class="topbar-mid">
+        <div class="top-title" id="caseTitle"></div>
+        <div class="progress" id="caseProgress"></div>
+      </div>
+      <span class="spacer"></span>
+    </div>
+    <div id="caseBody" style="width:100%"></div>
+  </section>
+
+  <section class="screen" id="case-accuse" data-theme="case">
+    <div class="topbar">
+      <button class="icon-btn" data-go="case-play" aria-label="กลับไปดูหลักฐาน">←</button>
+      <div class="topbar-mid"><div class="top-title" id="accuseTitle"></div></div>
+      <span class="spacer"></span>
+    </div>
+    <div id="accuseBody" style="width:100%"></div>
+  </section>
+
+  <section class="screen" id="case-result" data-theme="case">
+    <div class="panel" id="caseResult"></div>
+  </section>
+
+  <section class="screen" id="riddle-play" data-theme="case">
+    <div class="topbar">
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <div class="topbar-mid"><div class="top-title" id="riddleTitle"></div></div>
+      <span class="spacer"></span>
+    </div>
+    <div id="riddleBody" style="width:100%; display:flex; flex-direction:column; align-items:center"></div>
+  </section>
+
+  <section class="screen" id="river-play" data-theme="case">
+    <div class="topbar">
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <div class="topbar-mid"><div class="top-title" id="riverTitle"></div></div>
+      <span class="spacer"></span>
+    </div>
+    <div id="riverBody" style="width:100%"></div>
   </section>
 </main>
 
-<script>
-const LEVELS = [
-  {
-    id: 1, name: "เลเวล 1 · ทำความรู้จัก", short: "เบาๆ สบายๆ", icon: "☁️", color: "var(--l1)",
-    questions: [
-      "ถ้าให้เลือกกินอาหารได้อย่างเดียวไปตลอดชีวิต จะเลือกอะไร",
-      "ความประทับใจแรกที่มีต่อคนตรงหน้าคืออะไร",
-      "เพลงที่ฟังซ้ำบ่อยที่สุดช่วงนี้คือเพลงอะไร",
-      "วันหยุดในอุดมคติของคุณเป็นแบบไหน",
-      "ถ้ามีพลังวิเศษได้หนึ่งอย่าง อยากได้อะไร",
-      "เรื่องเล็กๆ ที่ทำให้คุณยิ้มได้ทุกครั้งคืออะไร",
-      "ตอนเด็กๆ คุณอยากโตไปเป็นอะไร",
-      "สถานที่ที่อยากไปมากที่สุดในชีวิตคือที่ไหน",
-      "คุณเป็นคนตื่นเช้าหรือนอนดึก และชอบแบบนั้นเพราะอะไร",
-      "ของชิ้นไหนในห้องที่คุณรักที่สุด",
-    ],
-  },
-  {
-    id: 2, name: "เลเวล 2 · ลึกขึ้นอีกนิด", short: "เปิดใจมากขึ้น", icon: "🌙", color: "var(--l2)",
-    questions: [
-      "ช่วงเวลาไหนในชีวิตที่คุณรู้สึกภูมิใจในตัวเองที่สุด",
-      "มีอะไรที่คนส่วนใหญ่เข้าใจผิดเกี่ยวกับตัวคุณบ้าง",
-      "ความกลัวที่คุณไม่ค่อยได้บอกใครคืออะไร",
-      "อะไรที่ทำให้คุณรู้สึกว่าได้รับความรัก",
-      "บทเรียนที่ยากที่สุดที่คุณเคยได้เรียนรู้คืออะไร",
-      "ถ้าย้อนเวลาไปบอกตัวเองตอนอายุ 15 ได้ จะบอกอะไร",
-      "คุณจัดการกับความเศร้ายังไง",
-      "คนที่มีอิทธิพลกับชีวิตคุณมากที่สุดคือใคร เพราะอะไร",
-      "มีความฝันไหนที่คุณยอมแพ้ไปแล้วแต่ยังคิดถึงอยู่",
-      "เวลาแบบไหนที่คุณรู้สึกเป็นตัวเองมากที่สุด",
-    ],
-  },
-  {
-    id: 3, name: "เลเวล 3 · ลึกสุดใจ", short: "สำหรับคนที่พร้อม", icon: "✨", color: "var(--l3)",
-    questions: [
-      "มีอะไรที่คุณอยากขอบคุณคนตรงหน้า แต่ยังไม่เคยพูดออกไป",
-      "คุณคิดว่าเรามีอะไรเหมือนกันมากที่สุด",
-      "สิ่งที่คุณยังให้อภัยตัวเองไม่ได้คืออะไร",
-      "ถ้ารู้ว่าชีวิตเหลืออีกหนึ่งปี คุณจะเปลี่ยนอะไรบ้าง",
-      "คุณอยากให้คนจดจำคุณในฐานะคนแบบไหน",
-      "มีช่วงเวลาไหนที่คุณรู้สึกโดดเดี่ยวที่สุด",
-      "อะไรที่คุณอยากได้ยินจากใครสักคนมากที่สุดตอนนี้",
-      "คุณคิดว่าตัวเองเปลี่ยนไปมากแค่ไหนในปีที่ผ่านมา",
-      "บอกสิ่งที่คุณชื่นชมในตัวคนตรงหน้ามา 3 ข้อ",
-      "ความสัมพันธ์แบบไหนที่คุณอยากมีในอีก 10 ปีข้างหน้า",
-    ],
-  },
-];
-
-const WISHES = [
-  "ขอพรจากคนตรงหน้าได้ 1 ข้อ (ที่ทำได้จริงนะ)",
-  "เลือกคำถามจากใบไหนก็ได้ ให้คนตรงหน้าตอบอีกครั้ง",
-  "กอดหรือจับมือคนตรงหน้า 10 วินาที",
-  "ข้ามคำถามใบถัดไปได้ 1 ใบ เก็บไว้ใช้ตอนไหนก็ได้",
-  "ให้คนตรงหน้าเล่าความทรงจำดีๆ ที่มีร่วมกัน",
-];
-
-const ALL = {
-  id: "all", name: "รวมทุกเลเวล", short: "สุ่มไล่จากเบาไปลึก", icon: "🔮", color: "var(--wish)",
-};
-
-const $ = (id) => document.getElementById(id);
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const state = { level: null, deck: [], index: -1, flipped: false, busy: false };
-
-/* ---------- เอฟเฟกต์ประกาย (canvas) ---------- */
-const fx = (() => {
-  const canvas = $("fx");
-  const ctx = canvas.getContext("2d");
-  const COLORS = ["#e9c77b", "#f5dca6", "#f3c6d3", "#d9c9f2", "#c8e3f5", "#ffffff"];
-  const parts = [];
-  const dust = [];
-  let W = 0, H = 0;
-
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = innerWidth; H = innerHeight;
-    canvas.width = W * dpr; canvas.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function sparkle(x, y, r, rot) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.quadraticCurveTo(0, 0, r, 0);
-    ctx.quadraticCurveTo(0, 0, 0, r);
-    ctx.quadraticCurveTo(0, 0, -r, 0);
-    ctx.quadraticCurveTo(0, 0, 0, -r);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function burst(x, y, { n = 30, speed = 5, size = 7, gravity = 0.06, life = 70, colors = COLORS } = {}) {
-    if (reduceMotion) return;
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const v = speed * (0.3 + Math.random() * 0.9);
-      parts.push({
-        x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1,
-        g: gravity, r: size * (0.4 + Math.random() * 0.8),
-        rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.2,
-        life: life * (0.6 + Math.random() * 0.6), max: 0,
-        c: colors[(Math.random() * colors.length) | 0],
-      });
-      parts[parts.length - 1].max = parts[parts.length - 1].life;
-    }
-  }
-
-  function initDust() {
-    dust.length = 0;
-    const count = Math.round(Math.min(60, (W * H) / 18000));
-    for (let i = 0; i < count; i++) {
-      dust.push({
-        x: Math.random() * W, y: Math.random() * H,
-        r: 1.5 + Math.random() * 3.5, vy: -(0.1 + Math.random() * 0.35),
-        sway: Math.random() * Math.PI * 2, tw: 0.02 + Math.random() * 0.04,
-        c: COLORS[(Math.random() * COLORS.length) | 0],
-      });
-    }
-  }
-
-  let t = 0;
-  function loop() {
-    t++;
-    ctx.clearRect(0, 0, W, H);
-
-    // ฝุ่นทองลอยขึ้นช้าๆ และกะพริบ
-    for (const d of dust) {
-      d.y += d.vy;
-      d.x += Math.sin(t * 0.01 + d.sway) * 0.2;
-      if (d.y < -10) { d.y = H + 10; d.x = Math.random() * W; }
-      ctx.globalAlpha = 0.25 + 0.55 * Math.abs(Math.sin(t * d.tw + d.sway));
-      ctx.fillStyle = d.c;
-      sparkle(d.x, d.y, d.r, t * 0.01 + d.sway);
-    }
-
-    // ประกายจากการระเบิด/ลากนิ้ว
-    ctx.shadowColor = "rgba(255,230,170,.9)";
-    ctx.shadowBlur = 8;
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const p = parts[i];
-      p.vx *= 0.97; p.vy = p.vy * 0.97 + p.g;
-      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
-      if (p.life <= 0) { parts.splice(i, 1); continue; }
-      const k = p.life / p.max;
-      ctx.globalAlpha = Math.min(1, k * 1.5);
-      ctx.fillStyle = p.c;
-      sparkle(p.x, p.y, p.r * (0.5 + k * 0.5), p.rot);
-    }
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(loop);
-  }
-
-  resize();
-  initDust();
-  addEventListener("resize", () => { resize(); initDust(); });
-  if (!reduceMotion) requestAnimationFrame(loop);
-
-  // ประกายตามเมาส์/นิ้ว
-  let last = 0;
-  addEventListener("pointermove", (e) => {
-    const now = performance.now();
-    if (now - last < 35) return;
-    last = now;
-    burst(e.clientX, e.clientY, { n: 2, speed: 1.2, size: 5, gravity: 0.03, life: 45 });
-  });
-  addEventListener("pointerdown", (e) => burst(e.clientX, e.clientY, { n: 12, speed: 3, size: 6, life: 50 }));
-
-  return { burst };
-})();
-
-function centerOf(el) {
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
-
-/* นางฟ้าบินผ่านพร้อมโปรยประกาย */
-function fairyFlyBy() {
-  if (reduceMotion) return;
-  const fairy = $("fairy");
-  const W = innerWidth, H = innerHeight;
-  const anim = fairy.animate([
-    { transform: `translate(${-160}px, ${H * 0.75}px) rotate(-12deg) scale(.8)`, opacity: 0 },
-    { opacity: 1, offset: 0.15 },
-    { transform: `translate(${W * 0.45 - 65}px, ${H * 0.35}px) rotate(4deg) scale(1)`, offset: 0.55 },
-    { opacity: 1, offset: 0.85 },
-    { transform: `translate(${W + 40}px, ${H * 0.05}px) rotate(14deg) scale(.85)`, opacity: 0 },
-  ], { duration: 2600, easing: "ease-in-out" });
-
-  let running = true;
-  anim.onfinish = () => (running = false);
-  (function trail() {
-    if (!running) return;
-    const r = fairy.getBoundingClientRect();
-    fx.burst(r.left + r.width * 0.75, r.top + r.height * 0.35, { n: 3, speed: 1.5, size: 6, gravity: 0.05, life: 60 });
-    requestAnimationFrame(trail);
-  })();
-}
-
-/* ---------- ไพ่เอียงตามเมาส์/นิ้ว ---------- */
-const wrap = $("cardWrap");
-const tilt = $("tilt");
-wrap.addEventListener("pointermove", (e) => {
-  if (reduceMotion) return;
-  const r = wrap.getBoundingClientRect();
-  const px = (e.clientX - r.left) / r.width;
-  const py = (e.clientY - r.top) / r.height;
-  tilt.style.transform = `rotateX(${(0.5 - py) * 16}deg) rotateY(${(px - 0.5) * 16}deg)`;
-  wrap.style.setProperty("--mx", px * 100 + "%");
-  wrap.style.setProperty("--my", py * 100 + "%");
-});
-wrap.addEventListener("pointerleave", () => {
-  tilt.style.transform = "";
-  wrap.style.removeProperty("--mx");
-  wrap.style.removeProperty("--my");
-});
-
-/* ---------- ตรรกะเกม ---------- */
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function buildDeck(level) {
-  const toCards = (lv) => lv.questions.map((q) => ({ text: q, level: lv }));
-  let deck;
-  if (level.id === "all") {
-    // ไล่จากเบาไปลึก แต่สับภายในแต่ละเลเวล
-    deck = LEVELS.flatMap((lv) => shuffle(toCards(lv)));
-  } else {
-    deck = shuffle(toCards(level));
-  }
-  // แทรกไพ่ขอพร 2 ใบในตำแหน่งสุ่ม (ไม่ใช่ใบแรก)
-  shuffle(WISHES).slice(0, 2).forEach((w) => {
-    const pos = 1 + Math.floor(Math.random() * deck.length);
-    deck.splice(pos, 0, { text: w, wish: true });
-  });
-  return deck;
-}
-
-function renderLevels() {
-  const list = [...LEVELS, ALL];
-  $("levels").innerHTML = list.map((lv, i) => `
-    <button class="level-btn" data-id="${lv.id}" style="--i:${i}">
-      <span class="level-dot" style="--c:${lv.color}">${lv.icon}</span>
-      <span><strong>${lv.name}</strong><small>${lv.short}</small></span>
-    </button>`).join("");
-  $("levels").querySelectorAll(".level-btn").forEach((btn) => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      startGame(id === "all" ? ALL : LEVELS.find((l) => String(l.id) === id));
-    };
-  });
-}
-
-function show(screen) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("active", s.id === screen));
-  if (screen === "end") {
-    requestAnimationFrame(() => {
-      const c = centerOf(document.querySelector(".end-card"));
-      fx.burst(c.x, c.y - 80, { n: 80, speed: 7, size: 8, life: 90 });
-    });
-  }
-}
-
-function startGame(level) {
-  state.level = level;
-  state.deck = buildDeck(level);
-  state.index = -1;
-  state.flipped = false;
-  state.busy = false;
-  const card = $("card");
-  card.classList.remove("flipped", "deal");
-  wrap.classList.remove("wish-glow");
-  $("levelTag").textContent = level.name;
-  updateUI();
-  show("play");
-  void card.offsetWidth; // รีสตาร์ทแอนิเมชันแจกไพ่
-  card.classList.add("deal");
-}
-
-function fillFront(card) {
-  const front = $("front");
-  front.classList.toggle("wish", !!card.wish);
-  front.style.setProperty("--tint", card.wish ? "var(--wish)" : card.level.color);
-  $("badge").textContent = card.wish ? "✨ ไพ่ขอพร ✨" : card.level.name;
-  $("question").textContent = card.text;
-  $("num").textContent = `${state.index + 1} / ${state.deck.length}`;
-}
-
-function updateUI() {
-  const total = state.deck.length;
-  const left = total - state.index - 1;
-  $("progress").textContent = state.index < 0 ? `${total} ใบ` : `ใบที่ ${state.index + 1} จาก ${total}`;
-  $("bar").style.width = `${Math.max(0, (state.index + 1) / total) * 100}%`;
-  $("prevBtn").disabled = state.index <= 0;
-  $("nextBtn").textContent = state.index < 0 ? "เปิดไพ่" : (state.index >= total - 1 ? "จบสำรับ ✨" : "ใบถัดไป");
-  $("stack1").style.opacity = left > 1 ? 1 : 0;
-  $("stack2").style.opacity = left > 2 ? 1 : 0;
-}
-
-function next() {
-  if (state.busy) return;
-  if (state.index >= state.deck.length - 1) { show("end"); return; }
-  goTo(state.index + 1);
-}
-
-function prev() {
-  if (state.busy || state.index <= 0) return;
-  goTo(state.index - 1);
-}
-
-// คว่ำไพ่ก่อน แล้วค่อยเปลี่ยนเนื้อหาและพลิกเปิดใหม่
-function goTo(i) {
-  state.busy = true;
-  const card = $("card");
-  const reveal = () => {
-    state.index = i;
-    const data = state.deck[i];
-    fillFront(data);
-    card.classList.remove("deal");
-    card.classList.add("flipped");
-    state.flipped = true;
-    wrap.classList.toggle("wish-glow", !!data.wish);
-    updateUI();
-    setTimeout(() => {
-      const c = centerOf(wrap);
-      if (data.wish) {
-        fx.burst(c.x, c.y, { n: 90, speed: 8, size: 9, life: 100, colors: ["#e9c77b", "#f5dca6", "#fff3c4", "#ffffff"] });
-        fairyFlyBy();
-      } else {
-        fx.burst(c.x, c.y, { n: 28, speed: 5, size: 6 });
-      }
-      state.busy = false;
-    }, 420);
-  };
-  if (state.flipped) {
-    card.classList.remove("flipped");
-    state.flipped = false;
-    setTimeout(reveal, 450);
-  } else {
-    reveal();
-  }
-}
-
-wrap.onclick = next;
-wrap.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } };
-$("nextBtn").onclick = next;
-$("prevBtn").onclick = prev;
-$("homeBtn").onclick = () => show("home");
-$("endHomeBtn").onclick = () => show("home");
-$("shuffleBtn").onclick = () => startGame(state.level);
-$("againBtn").onclick = () => startGame(state.level);
-document.addEventListener("keydown", (e) => {
-  if (!$("play").classList.contains("active") || e.target === wrap) return;
-  if (e.key === "ArrowRight") next();
-  if (e.key === "ArrowLeft") prev();
-});
-
-renderLevels();
-</script>
+<script src="js/core.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/data/decks.js"></script>
+<script src="js/data/quizzes.js"></script>
+<script src="js/data/mysteries.js"></script>
+<script src="js/deeptalk.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/mystery.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
