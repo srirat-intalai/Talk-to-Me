@@ -2,6 +2,9 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<!-- โหลดได้เฉพาะไฟล์ของเว็บนี้เอง กันโค้ดแปลกปลอมจากที่อื่น
+     style ต้องมี 'unsafe-inline' เพราะหน้าเว็บใส่ style="--i:…" ในแท็กหลายจุด -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Talk to Me</title>
 <meta name="description" content="ไพ่ Deep Talk แบบทดสอบนิสัย และเกมไขคดี">
@@ -11,16 +14,16 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="images/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="images/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Athiti:wght@200;300;400;500;600;700&family=Fleur+De+Leah&family=Niconne&family=Ruwudu:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-theme="talk">
+<body data-theme="talk" data-screen="hub">
 <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<canvas id="bgfx" aria-hidden="true"></canvas>
 <canvas id="fx" aria-hidden="true"></canvas>
-<img id="fairy" src="images/wish1.jpeg" alt="" aria-hidden="true">
+<img id="fairy" src="images/fairy-fly.jpg" alt="" aria-hidden="true">
 <div id="toast" role="status"></div>
+<button class="icon-btn sound-btn sound-fab" type="button"></button>
 <div class="modal" id="modal" hidden>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modalMsg">
     <p id="modalMsg"></p>
@@ -36,7 +39,7 @@
   <section class="screen active" id="hub" data-theme="talk">
     <div class="hero">
       <div class="halo"></div>
-      <div class="frame"><img src="images/wish0.jpeg" alt="ภาพนางฟ้าสามองค์"><div class="glint"></div></div>
+      <div class="frame"><img src="images/hero.jpg" alt="ภาพนางฟ้าผมขาวถือไม้กายสิทธิ์ดาว"><div class="glint"></div></div>
     </div>
     <h1 class="logo">Talk to Me ✦</h1>
     <p class="tagline">คุยลึก วัดใจ ไขปริศนา<br>เล่นกับเพื่อน คนคุย หรือคนเดียวก็สนุก</p>
@@ -46,7 +49,7 @@
   <!-- ================= ไพ่ Deep Talk ================= -->
   <section class="screen" id="talk-decks" data-theme="talk">
     <div class="topbar">
-      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"></div>
       <span class="spacer"></span>
     </div>
@@ -54,7 +57,7 @@
     <p class="section-sub">เลือกมา 1 สำรับ · สำรับละ 52 ใบ<br>(50 คำถามไม่ซ้ำกัน + ไพ่ขอพร 2 ใบ)</p>
 
     <div class="panel players">
-      <div class="block-title" style="margin:0 0 6px">👥 ผู้เล่น <small id="playerHint"></small></div>
+      <div class="block-title" style="margin:0 0 6px"><span><i data-ic="users"></i> ผู้เล่น</span> <small id="playerHint"></small></div>
       <div class="chips" id="playerChips"></div>
       <form class="add-row" id="playerForm" autocomplete="off">
         <input class="text-input" id="playerInput" maxlength="20" placeholder="พิมพ์ชื่อ แล้วกดเพิ่ม" aria-label="ชื่อผู้เล่น">
@@ -63,18 +66,19 @@
     </div>
 
     <div class="menu" id="deckList" style="margin-top:16px"></div>
-    <button class="btn btn-ghost" id="customOpen" style="width:100%; margin-top:10px">✏️ เพิ่ม / แก้คำถามของฉัน</button>
+    <button class="btn btn-ghost" id="customOpen" style="width:100%; margin-top:10px"><i data-ic="pencil"></i> เพิ่ม / แก้คำถามของฉัน</button>
     <p class="howto">
       ผลัดกันจั่วไพ่ทีละใบ แล้วตอบแบบจริงใจ<br>
       ยังไม่พร้อมตอบข้อไหน กด "ใบถัดไป" ผ่านได้เลย<br>
-      เจอ <b>ไพ่ขอพร ✨</b> เมื่อไหร่ ทำตามที่ไพ่บอกนะ
+      บนมือถือ ปัดไพ่ไปซ้าย = ใบถัดไป · ปัดไปขวา = ใบก่อน<br>
+      เจอ <b>ไพ่ขอพร <i data-ic="sparkles"></i></b> เมื่อไหร่ ทำตามที่ไพ่บอกนะ
     </p>
   </section>
 
   <section class="screen" id="talk-custom" data-theme="talk">
     <div class="topbar">
-      <button class="icon-btn" id="customBack" aria-label="กลับไปเลือกสำรับ">←</button>
-      <div class="topbar-mid"><div class="top-title">✏️ คำถามของฉัน</div><div class="progress" id="customCount"></div></div>
+      <button class="icon-btn" id="customBack" aria-label="กลับไปเลือกสำรับ"><i data-ic="arrow-left"></i></button>
+      <div class="topbar-mid"><div class="top-title"><i data-ic="pencil"></i> คำถามของฉัน</div><div class="progress" id="customCount"></div></div>
       <span class="spacer"></span>
     </div>
     <form class="panel custom-form" id="customForm" autocomplete="off">
@@ -84,20 +88,21 @@
     <p class="muted" id="customEmpty" style="margin-top:18px; text-align:center">ยังไม่มีคำถาม ลองเพิ่มข้อแรกดูสิ</p>
     <ol class="custom-list" id="customList"></ol>
     <div class="stack-btns">
-      <button class="btn btn-primary" id="customPlay">🃏 เล่นคำถามของฉัน</button>
+      <button class="btn btn-primary" id="customPlay"><i data-ic="layers"></i> เล่นคำถามของฉัน</button>
     </div>
   </section>
 
   <section class="screen" id="talk-play" data-theme="talk">
     <div class="topbar">
-      <button class="icon-btn" id="talkBack" aria-label="กลับไปเลือกสำรับ">←</button>
+      <button class="icon-btn" id="talkBack" aria-label="กลับไปเลือกสำรับ"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid">
         <div class="top-title" id="talkTitle"></div>
         <div class="progress" id="talkProgress"></div>
         <div class="bar"><span id="talkBar"></span></div>
         <div class="turn" id="turnTag" aria-live="polite"></div>
       </div>
-      <button class="icon-btn" id="shuffleBtn" aria-label="สับไพ่ใหม่">↻</button>
+      <button class="icon-btn sound-btn" type="button"></button>
+      <button class="icon-btn" id="shuffleBtn" aria-label="สับไพ่ใหม่"><i data-ic="shuffle"></i></button>
     </div>
 
     <div class="card-wrap" id="cardWrap" role="button" tabindex="0" aria-label="ไพ่ แตะเพื่อเปิด">
@@ -112,6 +117,8 @@
           </div>
           <div class="face front" id="front">
             <div class="holo"></div>
+            <div class="rainbow"></div>
+            <div class="pal" id="pal"></div>
             <div class="badge" id="badge"></div>
             <div class="ornament">✦ ✧ ✦</div>
             <p class="question" id="question" aria-live="polite"></p>
@@ -124,7 +131,7 @@
 
     <div class="actions">
       <button class="btn btn-ghost" id="prevBtn">ใบก่อน</button>
-      <button class="icon-btn fav" id="favBtn" aria-label="เก็บไว้ในไพ่ที่ชอบ" aria-pressed="false">♡</button>
+      <button class="icon-btn fav" id="favBtn" aria-label="เก็บไว้ในไพ่ที่ชอบ" aria-pressed="false"><i data-ic="heart"></i></button>
       <button class="btn btn-primary" id="nextBtn">เปิดไพ่</button>
     </div>
   </section>
@@ -133,9 +140,9 @@
     <div class="panel end-card" id="talkEndCard">
       <div class="hero small wide">
         <div class="halo"></div>
-        <div class="frame"><img src="images/wish1.jpeg" alt="ภาพนางฟ้าโบกไม้กายสิทธิ์"><div class="glint"></div></div>
+        <div class="frame"><img src="images/duo.jpg" alt="ภาพนางฟ้าสององค์"><div class="glint"></div></div>
       </div>
-      <h2>ครบสำรับแล้ว ✨</h2>
+      <h2>ครบสำรับแล้ว <i data-ic="sparkles"></i></h2>
       <p class="muted">ขอบคุณที่เปิดใจคุยกันนะ<br>หวังว่าจะได้รู้จักกันมากขึ้นอีกนิด</p>
       <div class="stack-btns">
         <button class="btn btn-primary" id="againBtn">เล่นสำรับนี้อีกรอบ</button>
@@ -147,13 +154,13 @@
   <!-- ================= แบบทดสอบ ================= -->
   <section class="screen" id="quiz-list" data-theme="quiz">
     <div class="topbar">
-      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"></div>
       <span class="spacer"></span>
     </div>
     <div class="hero small wide">
       <div class="halo"></div>
-      <div class="frame"><img src="images/wish1.jpeg" alt=""><div class="glint"></div></div>
+      <div class="frame"><img src="images/duo.jpg" alt=""><div class="glint"></div></div>
     </div>
     <h2 class="section-title">แบบทดสอบ</h2>
     <p class="section-sub">ตอบตามใจ ไม่มีถูกไม่มีผิด</p>
@@ -162,13 +169,13 @@
 
   <section class="screen" id="quiz-play" data-theme="quiz">
     <div class="topbar">
-      <button class="icon-btn" id="quizBack" aria-label="ย้อนกลับ">←</button>
+      <button class="icon-btn" id="quizBack" aria-label="ย้อนกลับ"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid">
         <div class="top-title" id="quizTitle"></div>
         <div class="progress" id="quizProgress"></div>
         <div class="bar"><span id="quizBar"></span></div>
       </div>
-      <button class="icon-btn" data-go="quiz-list" aria-label="ออก">✕</button>
+      <button class="icon-btn" data-go="quiz-list" aria-label="ออก"><i data-ic="x"></i></button>
     </div>
     <div class="panel q-card" id="quizCard">
       <div class="orb sm"><div class="halo"></div><span id="quizScene"></span></div>
@@ -179,7 +186,7 @@
 
   <section class="screen" id="quiz-result" data-theme="quiz">
     <div class="topbar">
-      <button class="icon-btn" data-go="quiz-list" aria-label="กลับหน้ารวม">←</button>
+      <button class="icon-btn" data-go="quiz-list" aria-label="กลับหน้ารวม"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"></div>
       <span class="spacer"></span>
     </div>
@@ -189,13 +196,13 @@
   <!-- ================= ไขคดี & ปริศนา ================= -->
   <section class="screen" id="mystery-list" data-theme="case">
     <div class="topbar">
-      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก">←</button>
+      <button class="icon-btn" data-go="hub" aria-label="กลับหน้าแรก"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"></div>
       <span class="spacer"></span>
     </div>
     <div class="hero small">
       <div class="halo"></div>
-      <div class="frame"><img src="images/wish0.jpeg" alt=""><div class="glint"></div></div>
+      <div class="frame"><img src="images/hero.jpg" alt=""><div class="glint"></div></div>
     </div>
     <h2 class="section-title">ไขคดี & ปริศนา</h2>
     <p class="section-sub">สังเกตให้ดี ความจริงซ่อนอยู่ในรายละเอียด</p>
@@ -204,7 +211,7 @@
 
   <section class="screen" id="case-play" data-theme="case">
     <div class="topbar">
-      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid">
         <div class="top-title" id="caseTitle"></div>
         <div class="progress" id="caseProgress"></div>
@@ -216,7 +223,7 @@
 
   <section class="screen" id="case-accuse" data-theme="case">
     <div class="topbar">
-      <button class="icon-btn" data-go="case-play" aria-label="กลับไปดูหลักฐาน">←</button>
+      <button class="icon-btn" data-go="case-play" aria-label="กลับไปดูหลักฐาน"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"><div class="top-title" id="accuseTitle"></div></div>
       <span class="spacer"></span>
     </div>
@@ -229,7 +236,7 @@
 
   <section class="screen" id="riddle-play" data-theme="case">
     <div class="topbar">
-      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"><div class="top-title" id="riddleTitle"></div></div>
       <span class="spacer"></span>
     </div>
@@ -238,7 +245,7 @@
 
   <section class="screen" id="river-play" data-theme="case">
     <div class="topbar">
-      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม">←</button>
+      <button class="icon-btn" data-go="mystery-list" aria-label="กลับหน้ารวม"><i data-ic="arrow-left"></i></button>
       <div class="topbar-mid"><div class="top-title" id="riverTitle"></div></div>
       <span class="spacer"></span>
     </div>
@@ -246,8 +253,12 @@
   </section>
 </main>
 
+<script src="js/icons.js"></script>
 <script src="js/core.js"></script>
 <script src="js/fx.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/art.js"></script>
+<script src="js/fairy.js"></script>
 <script src="js/data/decks.js"></script>
 <script src="js/data/quizzes.js"></script>
 <script src="js/data/mysteries.js"></script>

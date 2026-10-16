@@ -4,6 +4,9 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // เครื่องเล็กหรือสเปกต่ำ: ลดจำนวนประกายลง
 const isLite = Math.min(innerWidth, innerHeight) < 600 || (navigator.hardwareConcurrency || 8) <= 4;
 
+// <i data-ic="ชื่อ"> ใน index.html → ไอคอนจริง
+document.querySelectorAll("[data-ic]").forEach((el) => (el.outerHTML = ic(el.dataset.ic)));
+
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -26,6 +29,11 @@ const store = {
   },
 };
 
+// ข้อมูลใน localStorage ถูกแก้จากภายนอกได้ (เว็บอื่นใน origin เดียวกัน / แก้มือ)
+// ก่อนใช้ต้องเช็กชนิด และ escape ก่อนเอาไปใส่ innerHTML
+const asObject = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 function centerOf(el) {
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -34,6 +42,8 @@ function centerOf(el) {
 function show(id) {
   const target = $(id);
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("active", s === target));
+  document.body.dataset.screen = id;
+  if (typeof Fairy !== "undefined") Fairy.onScreen(id);
   const theme = target.dataset.theme || "talk";
   if (document.body.dataset.theme !== theme) {
     document.body.dataset.theme = theme;
@@ -71,9 +81,11 @@ function ask(msg, yes = "ตกลง", no = "ยกเลิก") {
 }
 
 let toastTimer;
-function toast(msg) {
+// icon: ชื่อไอคอนที่จะแสดงท้ายข้อความ (ไม่ใส่ก็ได้)
+function toast(msg, icon) {
   const t = $("toast");
   t.textContent = msg;
+  if (icon) t.insertAdjacentHTML("beforeend", " " + ic(icon));
   t.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
@@ -81,10 +93,26 @@ function toast(msg) {
 
 function menuItem({ id, icon, color, title, sub, badge = "", i = 0, big = false }) {
   return `<button class="menu-btn${big ? " big" : ""}" data-id="${id}" style="--i:${i}">
-    <span class="menu-dot" style="--c:${color}">${icon}</span>
+    <span class="menu-dot" style="--c:${color}">${ic(icon)}</span>
     <span class="menu-text"><strong>${title}</strong><small>${sub}</small></span>
     ${badge ? `<span class="menu-badge">${badge}</span>` : ""}
   </button>`;
+}
+
+// ตัวเลขที่มี data-count จะนับขึ้นจาก 0 ไปจนถึงค่านั้น (ต่อท้ายด้วย data-suffix)
+function countUp(root, ms = 900) {
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    const end = Number(el.dataset.count) || 0;
+    const suffix = el.dataset.suffix || "";
+    if (reduceMotion) { el.textContent = end + suffix; return; }
+    const start = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / ms);
+      el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))) + suffix;
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
 }
 
 function bindMenu(container, handler) {
@@ -92,7 +120,7 @@ function bindMenu(container, handler) {
 }
 
 function starsHtml(n) {
-  return [0, 1, 2].map((i) => (i < n ? `<span class="on" style="animation-delay:${i * 150}ms">★</span>` : "★")).join("");
+  return [0, 1, 2].map((i) => (i < n ? `<span class="on" style="animation-delay:${i * 150}ms">${ic("star")}</span>` : `<span>${ic("star")}</span>`)).join("");
 }
 
 // ปุ่มที่มี data-go="screen-id" จะพาไปหน้านั้น
@@ -109,7 +137,7 @@ async function shareText(text) {
       return;
     }
     await navigator.clipboard.writeText(url ? `${text}\n${url}` : text);
-    toast("คัดลอกผลลัพธ์แล้ว ✨");
+    toast("คัดลอกผลลัพธ์แล้ว", "sparkles");
   } catch {
     // ผู้ใช้กดยกเลิกการแชร์ ไม่ต้องทำอะไร
   }

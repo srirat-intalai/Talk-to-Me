@@ -17,8 +17,8 @@ const Talk = (() => {
   let custom = strings(store.get("custom", [])).slice(0, MAX_CUSTOM);
   let favs = strings(store.get("favs", [])).slice(0, MAX_FAVS);
 
-  const customDeck = () => ({ id: "custom", name: "คำถามของฉัน", icon: "✏️", color: "#f2e2c4", questions: custom, wish: false });
-  const favDeck = () => ({ id: "favs", name: "ไพ่ที่ชอบ", icon: "💛", color: "#f7e7b4", questions: favs, wish: false });
+  const customDeck = () => ({ id: "custom", name: "คำถามของฉัน", icon: "pencil", color: "#f2e2c4", questions: custom, wish: false });
+  const favDeck = () => ({ id: "favs", name: "ไพ่ที่ชอบ", icon: "heart", color: "#f7e7b4", questions: favs, wish: false });
 
   function findDeck(id) {
     if (id === "custom") return customDeck();
@@ -27,12 +27,11 @@ const Talk = (() => {
   }
 
   const clean = (text, max) => text.replace(/\s+/g, " ").trim().slice(0, max);
+  // ตัวการ์ตูนมุมไพ่: สำรับสุ่มใช้ตัวของสำรับต้นทางของใบนั้น
+  const PAL_OF = { star: "star", flower: "flower", moon: "moon", dawn: "dawn", aurora: "aurora", custom: "heart", favs: "heart" };
 
   /* ---------- ความคืบหน้าที่เล่นค้าง ---------- */
-  const allProgress = () => {
-    const p = store.get("progress", {});
-    return p && typeof p === "object" ? p : {};
-  };
+  const allProgress = () => asObject(store.get("progress", {}));
 
   function savedFor(id) {
     const s = allProgress()[id];
@@ -75,21 +74,21 @@ const Talk = (() => {
           badge: badge(d, `${qs + WISH_PER_DECK} ใบ`),
         });
       }).join("") +
-      `<h3 class="group-title" style="margin-top:14px">✨ ของฉัน</h3>` +
+      `<h3 class="group-title" style="margin-top:14px">${ic("sparkles")} ของฉัน</h3>` +
       menuItem({
-        id: "custom", icon: "✏️", color: "#f2e2c4", title: "คำถามของฉัน", i: i++,
+        id: "custom", icon: "pencil", color: "#f2e2c4", title: "คำถามของฉัน", i: i++,
         sub: custom.length ? `${custom.length} คำถามที่เพิ่มเอง` : "ยังไม่มี แตะเพื่อเพิ่มคำถามของตัวเอง",
         badge: custom.length ? badge(customDeck(), `${custom.length} ใบ`) : "",
       }) +
       menuItem({
-        id: "favs", icon: "💛", color: "#f7e7b4", title: "ไพ่ที่ชอบ", i: i++,
-        sub: favs.length ? `${favs.length} คำถามที่กดหัวใจเก็บไว้` : "กด ♡ ระหว่างเล่น เพื่อเก็บไพ่ที่ชอบไว้ที่นี่",
+        id: "favs", icon: "heart", color: "#f7e7b4", title: "ไพ่ที่ชอบ", i: i++,
+        sub: favs.length ? `${favs.length} คำถามที่กดหัวใจเก็บไว้` : `กด ${ic("heart")} ระหว่างเล่น เพื่อเก็บไพ่ที่ชอบไว้ที่นี่`,
         badge: favs.length ? badge(favDeck(), `${favs.length} ใบ`) : "",
       });
 
     bindMenu($("deckList"), (id) => {
       if (id === "custom") return custom.length ? start(customDeck()) : openCustom();
-      if (id === "favs") return favs.length ? start(favDeck()) : toast("ยังไม่มีไพ่ที่ชอบ กด ♡ ระหว่างเล่นก่อนนะ");
+      if (id === "favs") return favs.length ? start(favDeck()) : toast("ยังไม่มีไพ่ที่ชอบ กดรูปหัวใจระหว่างเล่นก่อนนะ");
       start(findDeck(id));
     });
   }
@@ -104,7 +103,7 @@ const Talk = (() => {
       chip.textContent = name;
       const del = document.createElement("button");
       del.type = "button";
-      del.textContent = "✕";
+      del.innerHTML = ic("x");
       del.setAttribute("aria-label", `ลบ ${name}`);
       del.onclick = () => {
         players.splice(i, 1);
@@ -150,7 +149,7 @@ const Talk = (() => {
       const del = document.createElement("button");
       del.type = "button";
       del.className = "icon-btn sm";
-      del.textContent = "✕";
+      del.innerHTML = ic("x");
       del.setAttribute("aria-label", "ลบคำถามนี้");
       del.onclick = () => {
         custom.splice(i, 1);
@@ -176,6 +175,8 @@ const Talk = (() => {
     store.set("custom", custom);
     input.value = "";
     renderCustom();
+    sfx.play("sparkle");
+    Fairy.say("คำถามดีมากเลย!", "happy", 2200);
     fx.burstAt($("customForm"), { n: 16, speed: 3.5, size: 6, life: 50 });
   };
   $("customPlay").onclick = () => custom.length && start(customDeck(), true);
@@ -203,7 +204,7 @@ const Talk = (() => {
     const saved = fresh ? null : savedFor(deck.id);
     if (saved) {
       const resume = await ask(
-        `${deck.icon} ${deck.name}\nเล่นค้างไว้ที่ใบ ${saved.index + 1} จาก ${saved.cards.length}\nจะเล่นต่อไหม?`,
+        `${deck.name}\nเล่นค้างไว้ที่ใบ ${saved.index + 1} จาก ${saved.cards.length}\nจะเล่นต่อไหม?`,
         "เล่นต่อ", "เริ่มใหม่",
       );
       if (resume) {
@@ -220,7 +221,7 @@ const Talk = (() => {
     state.seen = new Set(Array.from({ length: index + 1 }, (_, i) => i));
     card.classList.remove("flipped", "deal");
     wrap.classList.remove("wish-glow");
-    $("talkTitle").textContent = `${deck.icon} ${deck.name}`;
+    $("talkTitle").innerHTML = `${ic(deck.icon)} ${deck.name}`;
     $("talk-play").classList.toggle("has-turn", players.length > 0);
 
     if (index >= 0) {
@@ -239,8 +240,9 @@ const Talk = (() => {
     const front = $("front");
     front.classList.toggle("wish", !!c.wish);
     front.style.setProperty("--tint", c.wish ? "var(--wish)" : c.deck.color);
-    $("badge").textContent = c.wish ? "✨ ไพ่ขอพร ✨" : `${c.deck.icon} ${c.deck.name}`;
+    $("badge").innerHTML = c.wish ? `${ic("sparkles")} ไพ่ขอพร ${ic("sparkles")}` : `${ic(c.deck.icon)} ${c.deck.name}`;
     $("question").textContent = c.text;
+    $("pal").innerHTML = c.wish ? "" : ART.PALS[PAL_OF[c.deck.id]] || "";
     $("num").textContent = `${state.index + 1} / ${state.cards.length}`;
   }
 
@@ -250,12 +252,13 @@ const Talk = (() => {
     $("talkProgress").textContent = state.index < 0 ? `${total} ใบ` : `ใบที่ ${state.index + 1} จาก ${total}`;
     $("talkBar").style.width = `${Math.max(0, (state.index + 1) / total) * 100}%`;
     $("prevBtn").disabled = state.index <= 0;
-    $("nextBtn").textContent = state.index < 0 ? "เปิดไพ่" : (state.index >= total - 1 ? "จบสำรับ ✨" : "ใบถัดไป");
+    $("nextBtn").innerHTML = state.index < 0 ? "เปิดไพ่" : (state.index >= total - 1 ? `จบสำรับ ${ic("sparkles")}` : "ใบถัดไป");
     $("stack1").style.opacity = left > 1 ? 1 : 0;
     $("stack2").style.opacity = left > 2 ? 1 : 0;
 
     const who = playerAt(Math.max(0, state.index));
-    $("turnTag").textContent = who ? `🎤 ${state.index < 0 ? "เริ่มที่" : "ตาของ"} ${who}` : "";
+    $("turnTag").textContent = who ? `${state.index < 0 ? "เริ่มที่" : "ตาของ"} ${who}` : "";
+    if (who) $("turnTag").insertAdjacentHTML("afterbegin", ic("mic") + " ");
     updateFav();
   }
 
@@ -264,7 +267,7 @@ const Talk = (() => {
     const btn = $("favBtn");
     const on = !!c && !c.wish && favs.includes(c.text);
     btn.disabled = !c || c.wish;
-    btn.textContent = on ? "♥" : "♡";
+    btn.innerHTML = ic("heart", on ? "fill" : "");
     btn.classList.toggle("on", on);
     btn.setAttribute("aria-pressed", on);
   }
@@ -279,7 +282,8 @@ const Talk = (() => {
     } else {
       if (favs.length >= MAX_FAVS) return toast("ไพ่ที่ชอบเต็มแล้ว ลองเอาบางใบออกก่อน");
       favs.push(c.text);
-      toast("เก็บไว้ในไพ่ที่ชอบแล้ว 💛");
+      toast("เก็บไว้ในไพ่ที่ชอบแล้ว", "heart");
+      sfx.play("sparkle");
       fx.burstAt($("favBtn"), { n: 18, speed: 3.5, size: 6, life: 50, palette: fx.GOLD });
     }
     store.set("favs", favs);
@@ -315,6 +319,7 @@ const Talk = (() => {
         const firstTime = !state.seen.has(i);
         state.seen.add(i);
         if (firstTime && c.wish) {
+          sfx.play("chime");
           fx.burstAt(wrap, { n: 90, speed: 8, size: 9, life: 100, palette: fx.GOLD });
           fx.fairyFlyBy();
         } else if (firstTime) {
@@ -323,6 +328,7 @@ const Talk = (() => {
         state.busy = false;
       }, 420);
     };
+    sfx.play("flip");
     if (state.flipped) {
       card.classList.remove("flipped");
       state.flipped = false;
@@ -335,6 +341,8 @@ const Talk = (() => {
   function finish() {
     clearProgress(state.deck.id);
     show("talk-end");
+    sfx.play("win");
+    Fairy.say("คุยกันจนจบสำรับแล้ว เก่งมากเลย!", "happy");
     requestAnimationFrame(() => fx.burstAt($("talkEndCard"), { n: 80, speed: 7, size: 8, life: 90 }));
   }
 
@@ -354,7 +362,32 @@ const Talk = (() => {
     wrap.style.removeProperty("--my");
   });
 
-  wrap.onclick = next;
+  /* ปัดไพ่บนจอสัมผัส: ปัดซ้าย = ใบถัดไป ปัดขวา = ใบก่อน
+     หลังปัดเบราว์เซอร์บางตัวยังส่ง click ตามมา จึงกันไม่ให้นับเป็นการแตะซ้ำ */
+  let swipe = null, swipedAt = 0;
+  const resetDrag = () => { swipe = null; tilt.classList.remove("dragging"); tilt.style.transform = ""; };
+  wrap.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" || state.busy) return;
+    swipe = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  });
+  wrap.addEventListener("pointermove", (e) => {
+    if (!swipe || e.pointerId !== swipe.id) return;
+    const dx = e.clientX - swipe.x;
+    if (Math.abs(dx) < Math.abs(e.clientY - swipe.y)) return;
+    tilt.classList.add("dragging");
+    tilt.style.transform = `translateX(${dx * 0.4}px) rotate(${dx * 0.04}deg)`;
+  });
+  wrap.addEventListener("pointerup", (e) => {
+    if (!swipe || e.pointerId !== swipe.id) return;
+    const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+    resetDrag();
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    swipedAt = performance.now();
+    if (dx < 0) next(); else prev();
+  });
+  wrap.addEventListener("pointercancel", resetDrag);
+
+  wrap.onclick = () => { if (performance.now() - swipedAt > 400) next(); };
   wrap.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); next(); } };
   $("nextBtn").onclick = next;
   $("prevBtn").onclick = prev;

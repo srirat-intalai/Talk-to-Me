@@ -1,20 +1,37 @@
 /* ไขคดีและปริศนา: คดีสืบสวน / ปริศนาตัวเลือก / เกมข้ามแม่น้ำ */
 const Mystery = (() => {
-  const best = () => store.get("best", {});
+  const best = () => asObject(store.get("best", {}));
   function saveBest(id, stars) {
     const b = best();
-    if ((b[id] || 0) < stars) { b[id] = stars; store.set("best", b); }
+    if (starCount(b[id]) < stars) { b[id] = stars; store.set("best", b); }
   }
-  const starText = (n) => "★".repeat(n) + "☆".repeat(3 - n);
+  // จำนวนดาวมาจาก localStorage จึงบีบให้อยู่ 0–3 เสมอ (ค่าเกินจะทำ repeat() พัง)
+  const starCount = (v) => Math.max(0, Math.min(3, Math.round(Number(v)) || 0));
+  const starText = (n) => ic("star", "fill").repeat(n) + ic("star").repeat(3 - n);
+
+  // ปฏิกิริยาของนางฟ้า + เสียง ใช้ร่วมกันทุกเกมในหมวดนี้ (ได้ 3 ดาวมีพลุดาวตกด้วย)
+  function celebrate(stars) {
+    sfx.play("win");
+    if (stars === 3) fx.fireworks();
+    Fairy.say(stars === 3 ? "เต็ม 3 ดาว! สุดยอดไปเลย" : `เก่งมาก! ได้ ${stars} ดาวนะ`, "happy");
+  }
+  function puzzled(msg) {
+    sfx.play("wrong");
+    Fairy.say(msg, "confused");
+  }
+  function hinted() {
+    sfx.play("tap");
+    Fairy.say("ลองอ่านคำใบ้ตรงนั้นดูนะ", "point");
+  }
 
   function renderList() {
     const b = best();
     let i = 0;
     $("mysteryList").innerHTML = MYSTERY_GROUPS.map((g) =>
-      `<h3 class="group-title">${g.title}</h3>` + g.items.map((m) => menuItem({
+      `<h3 class="group-title">${rich(g.title)}</h3>` + g.items.map((m) => menuItem({
         id: m.id, icon: m.icon, color: m.color, title: m.title, i: i++,
         sub: m.type === "case" ? `ระดับ${m.level} · ${m.setting}` : (m.type === "river" ? "เกมพายเรือ เล่นได้จริง" : "ปริศนาหาคำตอบ"),
-        badge: b[m.id] ? starText(b[m.id]) : (m.type === "case" ? m.level : ""),
+        badge: starCount(b[m.id]) ? starText(starCount(b[m.id])) : (m.type === "case" ? m.level : ""),
       })).join("")
     ).join("");
     bindMenu($("mysteryList"), (id) => {
@@ -35,7 +52,7 @@ const Mystery = (() => {
       hintUsed = false;
       wrong = 0;
       accused = null;
-      $("caseTitle").textContent = `${c.icon} ${c.title}`;
+      $("caseTitle").innerHTML = `${ic(c.icon)} ${c.title}`;
       render();
       show("case-play");
     }
@@ -45,42 +62,42 @@ const Mystery = (() => {
       $("caseProgress").textContent = `หลักฐาน ${revealed.size}/${c.clues.length}`;
       $("caseBody").innerHTML = `
         <div class="panel case-file">
-          <div class="case-meta">📁 แฟ้มคดี · ระดับ${c.level}</div>
+          <div class="case-meta">${ic("folder")} แฟ้มคดี · ระดับ${c.level}</div>
           <h2>${c.title}</h2>
           <div class="case-meta">${c.setting}</div>
           <p class="case-story">${c.story}</p>
         </div>
 
-        <div class="block-title">🧑‍🤝‍🧑 ผู้ต้องสงสัย <small>${c.suspects.length} คน</small></div>
+        <div class="block-title"><span>${ic("users")} ผู้ต้องสงสัย</span> <small>${c.suspects.length} คน</small></div>
         <div class="suspects">${c.suspects.map((s) => `
-          <div class="suspect"><span class="avatar">${s.emoji}</span>
+          <div class="suspect"><span class="avatar">${ic(s.icon)}</span>
             <div><strong>${s.name}</strong><small>${s.role}</small><q>${s.says}</q></div>
           </div>`).join("")}
         </div>
 
-        <div class="block-title">🔍 หลักฐาน <small id="clueCount">แตะเพื่อตรวจ · ${revealed.size}/${c.clues.length}</small></div>
+        <div class="block-title"><span>${ic("search")} หลักฐาน</span> <small id="clueCount">แตะเพื่อตรวจ · ${revealed.size}/${c.clues.length}</small></div>
         <div class="clues">${c.clues.map((cl, i) => clueHtml(cl, i)).join("")}</div>
 
-        ${hintUsed ? `<div class="hint-box">💡 ${c.hint}</div>` : ""}
+        ${hintUsed ? `<div class="hint-box">${ic("lightbulb")} ${c.hint}</div>` : ""}
 
         <div class="row-btns">
-          <button class="btn btn-ghost" id="hintBtn" ${hintUsed ? "disabled" : ""}>💡 ขอคำใบ้ (−1 ดาว)</button>
+          <button class="btn btn-ghost" id="hintBtn" ${hintUsed ? "disabled" : ""}>${ic("lightbulb")} ขอคำใบ้ (−1 ดาว)</button>
         </div>
         <div class="stack-btns" style="margin-top:10px">
           <button class="btn btn-primary" id="accuseBtn" ${allSeen ? "" : "disabled"}>
-            ${allSeen ? "🔎 ชี้ตัวคนร้าย" : `ตรวจหลักฐานให้ครบก่อน (${revealed.size}/${c.clues.length})`}
+            ${allSeen ? `${ic("fingerprint")} ชี้ตัวคนร้าย` : `ตรวจหลักฐานให้ครบก่อน (${revealed.size}/${c.clues.length})`}
           </button>
         </div>`;
 
       $("caseBody").querySelectorAll(".clue").forEach((el) => (el.onclick = () => reveal(el)));
-      $("hintBtn").onclick = () => { hintUsed = true; render(); toast("ได้คำใบ้แล้ว 💡"); };
+      $("hintBtn").onclick = () => { hintUsed = true; render(); toast("ได้คำใบ้แล้ว", "lightbulb"); hinted(); };
       $("accuseBtn").onclick = () => accuseStep1();
     }
 
     function clueHtml(cl, i) {
       return revealed.has(cl.id)
-        ? `<button class="clue" data-id="${cl.id}"><div class="c-head"><span class="c-icon">${cl.icon}</span>${cl.title}</div><p>${cl.text}</p></button>`
-        : `<button class="clue hidden" data-id="${cl.id}"><div><span class="q">🔍</span>หลักฐาน #${i + 1}<br><small>แตะเพื่อตรวจ</small></div></button>`;
+        ? `<button class="clue" data-id="${cl.id}"><div class="c-head"><span class="c-icon">${ic(cl.icon)}</span>${cl.title}</div><p>${cl.text}</p></button>`
+        : `<button class="clue hidden" data-id="${cl.id}"><div><span class="q">${ic("search")}</span>หลักฐาน #${i + 1}<br><small>แตะเพื่อตรวจ</small></div></button>`;
     }
 
     // พลิกการ์ดหลักฐาน: หมุนไปครึ่งทาง → เปลี่ยนเนื้อหา → หมุนกลับ
@@ -88,6 +105,7 @@ const Mystery = (() => {
       const id = el.dataset.id;
       if (revealed.has(id)) return;
       revealed.add(id);
+      sfx.play("flip");
       const cl = c.clues.find((x) => x.id === id);
       const i = c.clues.indexOf(cl);
       const swap = () => {
@@ -111,7 +129,7 @@ const Mystery = (() => {
       $("accuseBody").innerHTML = `
         <p class="section-sub">เลือกผู้ต้องสงสัย 1 คน</p>
         <div class="suspects">${c.suspects.map((s) => `
-          <button class="suspect" data-id="${s.id}"><span class="avatar">${s.emoji}</span>
+          <button class="suspect" data-id="${s.id}"><span class="avatar">${ic(s.icon)}</span>
             <div><strong>${s.name}</strong><small>${s.role}</small><q>${s.says}</q></div>
           </button>`).join("")}
         </div>`;
@@ -127,9 +145,9 @@ const Mystery = (() => {
       const s = c.suspects.find((x) => x.id === accused);
       $("accuseTitle").textContent = "หลักฐานไหนมัดตัว?";
       $("accuseBody").innerHTML = `
-        <p class="section-sub">ชี้ตัว <b>${s.emoji} ${s.name}</b> แล้ว<br>หลักฐานชิ้นไหนสำคัญที่สุดที่ทำให้มั่นใจ?</p>
+        <p class="section-sub">ชี้ตัว <b>${ic(s.icon)} ${s.name}</b> แล้ว<br>หลักฐานชิ้นไหนสำคัญที่สุดที่ทำให้มั่นใจ?</p>
         <div class="clues">${c.clues.map((cl) => `
-          <button class="clue" data-id="${cl.id}"><div class="c-head"><span class="c-icon">${cl.icon}</span>${cl.title}</div><p>${cl.text}</p></button>`).join("")}
+          <button class="clue" data-id="${cl.id}"><div class="c-head"><span class="c-icon">${ic(cl.icon)}</span>${cl.title}</div><p>${cl.text}</p></button>`).join("")}
         </div>`;
       $("accuseBody").querySelectorAll(".clue").forEach((b) => (b.onclick = () => solved(c.key.includes(b.dataset.id))));
       window.scrollTo(0, 0);
@@ -138,16 +156,20 @@ const Mystery = (() => {
     function wrongGuess() {
       const s = c.suspects.find((x) => x.id === accused);
       $("caseResult").innerHTML = `
-        <div class="orb"><div class="halo"></div><span>🤔</span></div>
+        <div class="orb"><div class="halo"></div><span>${ic("circle-help")}</span></div>
         <h2>ยังไม่ใช่นะ...</h2>
-        <p class="muted">${s.emoji} ${s.name} มีหลักฐานที่ฟังขึ้นอยู่<br>ลองอ่านคำให้การเทียบกับหลักฐานอีกที</p>
+        <p class="muted">${ic(s.icon)} ${s.name} มีหลักฐานที่ฟังขึ้นอยู่<br>ลองอ่านคำให้การเทียบกับหลักฐานอีกที</p>
         <div class="stack-btns">
           <button class="btn btn-primary" id="caseRetry">กลับไปสืบต่อ (−1 ดาว)</button>
           <button class="btn btn-ghost" id="caseGiveUp">ยอมแพ้ ดูเฉลย</button>
         </div>`;
       $("caseRetry").onclick = () => { wrong++; render(); show("case-play"); };
-      $("caseGiveUp").onclick = () => showSolution(0, false);
+      $("caseGiveUp").onclick = () => {
+        showSolution(0, false);
+        Fairy.say("ไม่เป็นไรนะ คดีหน้าเอาใหม่", "idle");
+      };
       show("case-result");
+      puzzled("อืม... ยังไม่ใช่นะ ลองเทียบคำให้การกับหลักฐานอีกที");
       $("caseResult").classList.remove("shake");
       void $("caseResult").offsetWidth;
       $("caseResult").classList.add("shake");
@@ -158,17 +180,18 @@ const Mystery = (() => {
       saveBest(c.id, stars);
       showSolution(stars, keyOk);
       fx.fairyFlyBy();
+      celebrate(stars);
     }
 
     function showSolution(stars, keyOk) {
       const win = stars > 0;
-      const keyClues = c.clues.filter((cl) => c.key.includes(cl.id)).map((cl) => `${cl.icon} ${cl.title}`).join(" หรือ ");
+      const keyClues = c.clues.filter((cl) => c.key.includes(cl.id)).map((cl) => `${ic(cl.icon)} ${cl.title}`).join(" หรือ ");
       $("caseResult").innerHTML = `
-        <div class="orb"><div class="halo"></div><span>${win ? "🏆" : "📜"}</span></div>
+        <div class="orb"><div class="halo"></div><span>${ic(win ? "trophy" : "scroll")}</span></div>
         <h2>${win ? "ไขคดีสำเร็จ!" : "เฉลยคดี"}</h2>
         ${win ? `<div class="stars">${starsHtml(stars)}</div>` : ""}
         ${win && !keyOk ? `<p class="muted">จับคนร้ายถูก แต่หลักฐานมัดตัวที่ดีที่สุดคือ ${keyClues}</p>` : ""}
-        <div class="solution" style="white-space:pre-line">${c.solution}</div>
+        <div class="solution" style="white-space:pre-line">${rich(c.solution)}</div>
         <div class="stack-btns">
           <button class="btn btn-primary" data-go="mystery-list">เลือกคดีอื่น</button>
           <button class="btn btn-ghost" id="caseReplay">เล่นคดีนี้ใหม่</button>
@@ -191,7 +214,7 @@ const Mystery = (() => {
       wrong = 0;
       hintUsed = false;
       done = false;
-      $("riddleTitle").textContent = `${r.icon} ${r.title}`;
+      $("riddleTitle").innerHTML = `${ic(r.icon)} ${r.title}`;
       render();
       show("riddle-play");
     }
@@ -199,21 +222,22 @@ const Mystery = (() => {
     function render() {
       $("riddleBody").innerHTML = `
         <div class="panel case-file" id="riddlePanel">
-          <div class="orb sm"><div class="halo"></div><span>${r.icon}</span></div>
-          <p class="case-story">${r.story}</p>
+          <div class="orb sm"><div class="halo"></div><span>${ic(r.icon)}</span></div>
+          <p class="case-story">${rich(r.story)}</p>
         </div>
-        <div class="block-title">❓ ${r.question}</div>
+        <div class="block-title"><span>${ic("circle-help")} ${rich(r.question)}</span></div>
         <div class="opts" id="riddleOpts" style="width:100%">${r.options.map((o, i) =>
-          `<button class="opt" data-i="${i}" style="--i:${i}">${o}</button>`).join("")}
+          `<button class="opt" data-i="${i}" style="--i:${i}">${rich(o)}</button>`).join("")}
         </div>
         <div id="riddleHint"></div>
-        <div class="row-btns"><button class="btn btn-ghost" id="riddleHintBtn">💡 ขอคำใบ้ (−1 ดาว)</button></div>
+        <div class="row-btns"><button class="btn btn-ghost" id="riddleHintBtn">${ic("lightbulb")} ขอคำใบ้ (−1 ดาว)</button></div>
         <div id="riddleAnswer" style="width:100%"></div>`;
       $("riddleOpts").querySelectorAll(".opt").forEach((b) => (b.onclick = () => pick(Number(b.dataset.i), b)));
       $("riddleHintBtn").onclick = () => {
         hintUsed = true;
-        $("riddleHint").innerHTML = `<div class="hint-box">💡 ${r.hint}</div>`;
+        $("riddleHint").innerHTML = `<div class="hint-box">${ic("lightbulb")} ${rich(r.hint)}</div>`;
         $("riddleHintBtn").disabled = true;
+        hinted();
       };
     }
 
@@ -225,6 +249,7 @@ const Mystery = (() => {
         btn.disabled = true;
         btn.animate([{ transform: "translateX(-8px)" }, { transform: "translateX(8px)" }, { transform: "translateX(0)" }], { duration: 300 });
         toast("ยังไม่ใช่ ลองใหม่อีกที!");
+        puzzled("เกือบแล้ว! ลองคิดอีกมุมดูนะ");
         return;
       }
       done = true;
@@ -233,11 +258,12 @@ const Mystery = (() => {
       $("riddleHintBtn").disabled = true;
       const stars = Math.max(1, 3 - wrong - (hintUsed ? 1 : 0));
       saveBest(r.id, stars);
+      celebrate(stars);
       $("riddleAnswer").innerHTML = `
         <div class="panel" style="margin-top:18px">
-          <h2>ถูกต้อง! 🎉</h2>
+          <h2>ถูกต้อง! ${ic("party-popper")}</h2>
           <div class="stars">${starsHtml(stars)}</div>
-          <div class="solution" style="white-space:pre-line">${r.explain}</div>
+          <div class="solution" style="white-space:pre-line">${rich(r.explain)}</div>
           <div class="stack-btns">
             <button class="btn btn-primary" id="riddleNext">ปริศนาถัดไป</button>
             <button class="btn btn-ghost" data-go="mystery-list">กลับหน้ารวม</button>
@@ -260,9 +286,11 @@ const Mystery = (() => {
 
   /* ================= เกมข้ามแม่น้ำ ================= */
   const River = (() => {
-    const ITEMS = { wolf: "🐺", goat: "🐐", cabbage: "🥬" };
+    // ไอคอนไม่มีรูปแพะ จึงแสดงชื่อกำกับใต้ไอคอนทุกตัว
+    const ITEMS = { wolf: "dog", goat: "paw-print", cabbage: "leafy-green" };
     const NAMES = { wolf: "หมาป่า", goat: "แพะ", cabbage: "กะหล่ำ" };
     let g, me, pos, cargo, trips, over, moving;
+    const token = (k) => `${ic(ITEMS[k])}<small>${NAMES[k]}</small>`;
 
     function start(data) {
       g = data;
@@ -272,11 +300,11 @@ const Mystery = (() => {
       trips = 0;
       over = false;
       moving = false;
-      $("riverTitle").textContent = `${g.icon} ${g.title}`;
+      $("riverTitle").innerHTML = `${ic(g.icon)} ${g.title}`;
       $("riverBody").innerHTML = `
         <div class="panel case-file">
-          <p class="case-story" style="margin-bottom:10px">${g.story}</p>
-          <ul class="rules">${g.rules.map((x) => `<li>${x}</li>`).join("")}</ul>
+          <p class="case-story" style="margin-bottom:10px">${rich(g.story)}</p>
+          <ul class="rules">${g.rules.map((x) => `<li>${rich(x)}</li>`).join("")}</ul>
         </div>
         <div class="river-board" id="riverBoard">
           <div class="bank" id="bank0"></div>
@@ -285,10 +313,10 @@ const Mystery = (() => {
         </div>
         <div class="river-status" id="riverStatus"></div>
         <div class="row-btns" style="margin-top:6px">
-          <button class="btn btn-primary" id="rowBtn">🚣 พายเรือ</button>
+          <button class="btn btn-primary" id="rowBtn">${ic("sailboat")} พายเรือ</button>
         </div>
         <div class="row-btns">
-          <button class="btn btn-ghost" id="riverReset">↻ เริ่มใหม่</button>
+          <button class="btn btn-ghost" id="riverReset">${ic("rotate-cw")} เริ่มใหม่</button>
           <button class="btn btn-ghost" id="riverSolve">ดูเฉลย</button>
         </div>
         <div id="riverEnd" style="width:100%"></div>`;
@@ -311,12 +339,12 @@ const Mystery = (() => {
         const bank = $("bank" + side);
         const here = Object.keys(ITEMS).filter((k) => pos[k] === side && cargo !== k);
         bank.innerHTML = `<div class="label">${side === 0 ? "ฝั่งนี้" : "ฝั่งโน้น"}</div>` +
-          here.map((k) => `<button class="token" data-k="${k}" aria-label="${NAMES[k]}" ${side !== me || cargo || over || moving ? "disabled" : ""}>${ITEMS[k]}</button>`).join("");
+          here.map((k) => `<button class="token" data-k="${k}" aria-label="${NAMES[k]}" ${side !== me || cargo || over || moving ? "disabled" : ""}>${token(k)}</button>`).join("");
       });
       const boat = $("boat");
       boat.classList.toggle("far", me === 1);
-      boat.innerHTML = `<span class="token me">🧑</span>` +
-        (cargo ? `<button class="token" data-k="${cargo}" aria-label="เอา${NAMES[cargo]}ลง" ${over || moving ? "disabled" : ""}>${ITEMS[cargo]}</button>` : "");
+      boat.innerHTML = `<span class="token me">${ic("user-round")}</span>` +
+        (cargo ? `<button class="token" data-k="${cargo}" aria-label="เอา${NAMES[cargo]}ลง" ${over || moving ? "disabled" : ""}>${token(cargo)}</button>` : "");
       $("riverBoard").querySelectorAll(".token[data-k]").forEach((t) => (t.onclick = () => toggle(t.dataset.k)));
       $("rowBtn").disabled = over || moving;
     }
@@ -325,17 +353,18 @@ const Mystery = (() => {
       if (over || moving) return;
       cargo = cargo === k ? null : k;
       render();
-      status(cargo ? `${ITEMS[cargo]} ขึ้นเรือแล้ว กด 'พายเรือ' ได้เลย` : "เอาลงจากเรือแล้ว");
+      status(cargo ? `${NAMES[cargo]}ขึ้นเรือแล้ว กด 'พายเรือ' ได้เลย` : "เอาลงจากเรือแล้ว");
     }
 
     function row() {
       if (over || moving) return;
       moving = true;
+      sfx.play("flip");
       me = 1 - me;
       if (cargo) pos[cargo] = me;
       trips++;
       render();
-      status(`เที่ยวที่ ${trips} กำลังพาย... 🌊`);
+      status(`เที่ยวที่ ${trips} กำลังพาย...`);
       setTimeout(arrive, reduceMotion ? 50 : 1000);
     }
 
@@ -345,15 +374,16 @@ const Mystery = (() => {
       const other = 1 - me;
       const left = Object.keys(ITEMS).filter((k) => pos[k] === other);
       const has = (k) => left.includes(k);
-      if (has("wolf") && has("goat")) return fail("🐺 หมาป่ากินแพะไปแล้ว! ห้ามทิ้งสองตัวนี้ไว้ด้วยกัน");
-      if (has("goat") && has("cabbage")) return fail("🐐 แพะกินกะหล่ำไปแล้ว! ห้ามทิ้งสองอย่างนี้ไว้ด้วยกัน");
+      if (has("wolf") && has("goat")) return fail("หมาป่ากินแพะไปแล้ว! ห้ามทิ้งสองตัวนี้ไว้ด้วยกัน");
+      if (has("goat") && has("cabbage")) return fail("แพะกินกะหล่ำไปแล้ว! ห้ามทิ้งสองอย่างนี้ไว้ด้วยกัน");
       render();
       if (Object.values(pos).every((p) => p === 1)) {
         const stars = trips <= 7 ? 3 : trips <= 9 ? 2 : 1;
         saveBest(g.id, stars);
-        status(`ข้ามครบทั้งหมดใน ${trips} เที่ยว! 🎉`);
+        status(`ข้ามครบทั้งหมดใน ${trips} เที่ยว!`);
         fx.burstAt($("riverBoard"), { n: 90, speed: 8, size: 9, life: 100, palette: fx.GOLD });
         fx.fairyFlyBy();
+        celebrate(stars);
         end(stars);
       } else {
         status(`ถึง${me === 1 ? "ฝั่งโน้น" : "ฝั่งนี้"}แล้ว · เที่ยวที่ ${trips}`);
@@ -364,6 +394,7 @@ const Mystery = (() => {
       over = true;
       render();
       status(msg, true);
+      puzzled("อุ๊ย! ลองวางแผนลำดับใหม่นะ");
       const b = $("riverBoard");
       b.classList.remove("shake");
       void b.offsetWidth;
@@ -377,7 +408,7 @@ const Mystery = (() => {
         <div class="panel" style="margin-top:16px">
           <h2>${stars ? "พาข้ามสำเร็จ!" : "เฉลย"}</h2>
           ${stars ? `<div class="stars">${starsHtml(stars)}</div><p class="muted">ใช้ไป ${trips} เที่ยว (น้อยสุดที่ทำได้คือ 7 เที่ยว)</p>` : ""}
-          <div class="solution" style="white-space:pre-line">${g.explain}</div>
+          <div class="solution" style="white-space:pre-line">${rich(g.explain)}</div>
           <div class="stack-btns">
             <button class="btn btn-primary" id="riverAgain">เล่นอีกรอบ</button>
             <button class="btn btn-ghost" data-go="mystery-list">กลับหน้ารวม</button>

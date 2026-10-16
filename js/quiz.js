@@ -3,12 +3,12 @@ const Quiz = (() => {
   let quiz = null, idx = 0, answers = [], busy = false;
 
   function renderList() {
-    const last = store.get("quizResults", {});
+    const last = asObject(store.get("quizResults", {}));
     let i = 0;
     $("quizList").innerHTML = QUIZ_GROUPS.map((g) => {
       const items = QUIZZES.filter((q) => q.group === g.id);
-      return `<h3 class="group-title">${g.title}</h3>` + items.map((q) => {
-        const r = last[q.id];
+      return `<h3 class="group-title">${rich(g.title)}</h3>` + items.map((q) => {
+        const r = typeof last[q.id] === "string" ? esc(last[q.id].slice(0, 60)) : "";
         return menuItem({
           id: q.id, icon: q.icon, color: q.color, title: q.title, sub: q.sub, i: i++,
           badge: r ? `ล่าสุด: ${r}` : (q.questions.length > 1 ? `${q.questions.length} ข้อ` : "1 ข้อ"),
@@ -23,7 +23,7 @@ const Quiz = (() => {
     idx = 0;
     answers = [];
     busy = false;
-    $("quizTitle").textContent = `${q.icon} ${q.title}`;
+    $("quizTitle").innerHTML = `${ic(q.icon)} ${q.title}`;
     show("quiz-play");
     renderQ();
   }
@@ -33,10 +33,10 @@ const Quiz = (() => {
     const total = quiz.questions.length;
     $("quizProgress").textContent = `ข้อ ${idx + 1} จาก ${total}`;
     $("quizBar").style.width = `${(idx / total) * 100}%`;
-    $("quizScene").textContent = q.icon || quiz.icon;
-    $("quizQ").textContent = q.q;
+    $("quizScene").innerHTML = ic(q.icon || quiz.icon);
+    $("quizQ").innerHTML = rich(q.q);
     $("quizOpts").innerHTML = q.options.map((o, i) =>
-      `<button class="opt${answers[idx] === i ? " picked" : ""}" data-i="${i}" style="--i:${i}">${o.t}</button>`
+      `<button class="opt${answers[idx] === i ? " picked" : ""}" data-i="${i}" style="--i:${i}">${rich(o.t)}</button>`
     ).join("");
     $("quizOpts").querySelectorAll(".opt").forEach((b) => (b.onclick = () => pick(Number(b.dataset.i), b)));
     const cardEl = $("quizCard");
@@ -49,6 +49,7 @@ const Quiz = (() => {
     if (busy) return;
     busy = true;
     answers[idx] = i;
+    sfx.play("tap");
     $("quizOpts").querySelectorAll(".opt").forEach((b) => b.classList.toggle("picked", b === btn));
     fx.burstAt(btn, { n: 14, speed: 3.5, size: 6, life: 50 });
     setTimeout(() => {
@@ -80,21 +81,35 @@ const Quiz = (() => {
     let html, saveAs, shareMsg;
 
     if (quiz.mode === "experiment") {
-      const verdict = quiz.verdict(answers);
+      // ทุกข้อแบ่งคะแนนเป็น 2 ฝั่ง ฝั่งไหนได้มากกว่าได้ผลนั้น ถ้าเท่ากันได้ "tie"
+      const scores = tally();
+      const [a, b] = Object.keys(quiz.results).filter((k) => k !== "tie");
+      const sa = scores[a] || 0, sb = scores[b] || 0;
+      const r = quiz.results[sa === sb ? "tie" : (sa > sb ? a : b)];
+      const ra = quiz.results[a], rb = quiz.results[b];
       html = `
-        <div class="orb"><div class="halo"></div><span>${quiz.icon}</span></div>
-        <div class="kicker">ผลการทดลอง</div>
-        <h2>${quiz.title}</h2>
-        <p class="result-tag">${quiz.sub}</p>
-        <div class="answers">${quiz.questions.map((q, i) => `
-          <div class="result-box"><small>${q.icon} ${q.short}</small><b>➜ ${q.options[answers[i]].t}</b></div>`).join("")}
+        <div class="orb"><div class="halo"></div><span>${ic(r.icon)}</span></div>
+        <div class="kicker">ผลการทดลอง · ${quiz.title}</div>
+        <h2>${r.name}</h2>
+        ${r.tag ? `<p class="result-tag">${r.tag}</p>` : ""}
+        <p class="result-desc">${rich(r.desc)}</p>
+        <div class="bars"><h3>คำตอบเอนไปทางไหน</h3>
+          <div class="bar-row">
+            <div class="labels"><span>${ic(ra.icon)} ${ra.name}</span><span>${rb.name} ${ic(rb.icon)}</span></div>
+            <div class="track"><span data-w="${(sa / (sa + sb || 1)) * 100}"></span></div>
+            <div class="labels" style="margin-top:4px"><b data-count="${sa}" data-suffix=" ข้อ">0 ข้อ</b><b data-count="${sb}" data-suffix=" ข้อ">0 ข้อ</b></div>
+          </div>
         </div>
-        <div class="result-box highlight" style="margin-bottom:14px"><p>${verdict}</p></div>
-        <div class="result-box" style="margin-bottom:8px"><h3>🔍 เบื้องหลังการทดลอง</h3>
-          ${quiz.insights.map((p) => `<p style="white-space:pre-line">${p}</p>`).join("")}
+        <div class="answers">${quiz.questions.map((q, i) => {
+          const o = q.options[answers[i]];
+          return `<div class="result-box"><small>${ic(q.icon)} ${q.short}</small><b>${ic("arrow-right")} ${rich(o.t)}</b>${o.n ? `<p>${rich(o.n)}</p>` : ""}</div>`;
+        }).join("")}
+        </div>
+        <div class="result-box" style="margin-bottom:8px"><h3>${ic("search")} เบื้องหลังการทดลอง</h3>
+          ${quiz.insights.map((p) => `<p style="white-space:pre-line">${rich(p)}</p>`).join("")}
         </div>`;
-      saveAs = "เล่นแล้ว";
-      shareMsg = `ลองเล่น "${quiz.title}" ใน Talk to Me แล้ว: ${verdict}`;
+      saveAs = r.name;
+      shareMsg = `เราได้ "${r.name}" จากการทดลอง ${quiz.title} ใน Talk to Me`;
     } else {
       const scores = tally();
       let key, bars = "";
@@ -116,7 +131,7 @@ const Quiz = (() => {
             .map((k) => ({ k, v: scores[k] || 0 }))
             .sort((x, y) => y.v - x.v)
             .map(({ k, v }) => `<div class="bar-row">
-              <div class="labels"><span>${quiz.results[k].emoji} ${quiz.results[k].name}</span><b>${Math.round((v / total) * 100)}%</b></div>
+              <div class="labels"><span>${ic(quiz.results[k].icon)} ${quiz.results[k].name}</span><b data-count="${Math.round((v / total) * 100)}" data-suffix="%">0%</b></div>
               <div class="track"><span data-w="${(v / total) * 100}"></span></div></div>`).join("")}</div>`;
         }
       }
@@ -127,26 +142,26 @@ const Quiz = (() => {
         .map((oi, qi) => ({ q: quiz.questions[qi], o: quiz.questions[qi].options[oi] }))
         .filter((x) => x.o.n);
       const notesHtml = notes.length
-        ? `<div class="result-box" style="margin-bottom:16px"><h3>🔮 บทวิเคราะห์รายด่าน</h3>${notes
-            .map((x) => `<p><b>${x.q.icon} ${x.q.short}</b><br>${x.o.n}</p>`).join("")}</div>`
+        ? `<div class="result-box" style="margin-bottom:16px"><h3>${ic("scroll-text")} บทวิเคราะห์รายด่าน</h3>${notes
+            .map((x) => `<p><b>${ic(x.q.icon)} ${x.q.short}</b><br>${rich(x.o.n)}</p>`).join("")}</div>`
         : "";
       html = `
-        <div class="orb"><div class="halo"></div><span>${r.emoji}</span></div>
+        <div class="orb"><div class="halo"></div><span>${ic(r.icon)}</span></div>
         <div class="kicker">ผลลัพธ์ของเรา</div>
         <h2>${r.name}</h2>
         ${r.tag ? `<p class="result-tag">${r.tag}</p>` : ""}
-        <p class="result-desc">${r.desc}</p>
+        <p class="result-desc">${rich(r.desc)}</p>
         <div class="result-cols two">${listBox(la, r.a)}${listBox(lb, r.b)}</div>
-        ${r.match ? `<p class="match">💞 เข้ากันได้ดีกับ <b>${r.match}</b></p>` : ""}
+        ${r.match ? `<p class="match">${ic("heart-handshake")} เข้ากันได้ดีกับ <b>${r.match}</b></p>` : ""}
         ${notesHtml}
         ${bars}`;
       saveAs = quiz.mode === "axes" ? key : r.name;
-      shareMsg = `เราได้ "${r.name}" จากแบบทดสอบ ${quiz.title} ใน Talk to Me ✨`;
+      shareMsg = `เราได้ "${r.name}" จากแบบทดสอบ ${quiz.title} ใน Talk to Me`;
     }
 
     html += `${quiz.note ? `<p class="note">${quiz.note}</p>` : ""}
       <div class="stack-btns">
-        <button class="btn btn-primary" id="quizShare">แชร์ผลลัพธ์ ✨</button>
+        <button class="btn btn-primary" id="quizShare">แชร์ผลลัพธ์ ${ic("share-2")}</button>
         <div class="row-btns" style="margin-top:0">
           <button class="btn btn-ghost" id="quizAgain">เล่นอีกรอบ</button>
           <button class="btn btn-ghost" data-go="quiz-list">เกมอื่น</button>
@@ -154,15 +169,18 @@ const Quiz = (() => {
       </div>`;
 
     $("quizResult").innerHTML = html;
-    const all = store.get("quizResults", {});
+    const all = asObject(store.get("quizResults", {}));
     all[quiz.id] = saveAs;
     store.set("quizResults", all);
 
     $("quizShare").onclick = () => shareText(shareMsg);
     $("quizAgain").onclick = () => start(quiz);
     show("quiz-result");
+    sfx.play("win");
+    Fairy.say(Fairy.pick(["ผลออกมาแล้ว! ตรงกับเธอไหม?", "ว้าว ผลลัพธ์น่าสนใจมาก", "รู้จักตัวเองเพิ่มอีกนิดแล้วนะ"]), "happy");
     requestAnimationFrame(() => {
       $("quizResult").querySelectorAll(".track span").forEach((s) => (s.style.width = s.dataset.w + "%"));
+      countUp($("quizResult"));
       fx.burstAt($("quizResult").querySelector(".orb"), { n: 70, speed: 7, size: 8, life: 90 });
     });
     renderList();
